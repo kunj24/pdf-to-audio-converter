@@ -1,0 +1,8 @@
+Flask==3.1.2
+PyPDF2==3.0.1
+pyttsx3==2.90
+pydub==0.25.1
+reportlab==4.4.5
+Werkzeug==3.1.4
+gunicorn==21.2.0
+python-dotenv==1.0.0
