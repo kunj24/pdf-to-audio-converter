@@ -15,12 +15,40 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 from pdf_to_audio import read_pdf_text, synth_to_wav, wav_to_mp3
 import pyttsx3
 
+# Import enhanced modules
+try:
+    from text_processor import text_processor, content_analyzer
+    TEXT_PROCESSOR_AVAILABLE = True
+except ImportError:
+    TEXT_PROCESSOR_AVAILABLE = False
+
+try:
+    from audio_processor import audio_processor, AudioQuality, AudioFormat
+    AUDIO_PROCESSOR_AVAILABLE = True
+except ImportError:
+    AUDIO_PROCESSOR_AVAILABLE = False
+
+try:
+    from document_converter import document_converter, DocumentFormat
+    DOCUMENT_CONVERTER_AVAILABLE = True
+    # Print document converter status at import time
+    print(f"✅ Document converter loaded. Supported: {document_converter.supported_formats}")
+except ImportError as e:
+    DOCUMENT_CONVERTER_AVAILABLE = False
+    print(f"❌ Document converter not available: {e}")
+
+try:
+    from job_queue import job_queue, rate_limiter, JobPriority
+    JOB_QUEUE_AVAILABLE = True
+except ImportError:
+    JOB_QUEUE_AVAILABLE = False
+
 def create_app():
     app = Flask(__name__)
     
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size (increased for more formats)
     app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'uploads')
     app.config['OUTPUT_FOLDER'] = os.environ.get('OUTPUT_FOLDER', 'output')
     
@@ -47,7 +75,7 @@ app = create_app()
 
 # Store conversion jobs and their status
 conversion_jobs = {}
-ALLOWED_EXTENSIONS = {'pdf'}
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'epub', 'html', 'htm', 'jpg', 'jpeg', 'png', 'bmp', 'tiff'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -70,28 +98,65 @@ def get_available_voices():
         app.logger.error(f"Error getting voices: {e}")
         return [{'index': 0, 'name': 'Default Voice', 'id': 'default'}]
 
-def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start_page, end_page, output_format):
-    """Background task to convert PDF to audio"""
+def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start_page, end_page, output_format, options=None):
+    """Background task to convert document to audio with enhanced processing"""
+    options = options or {}
+    
     try:
         conversion_jobs[job_id]['status'] = 'processing'
         conversion_jobs[job_id]['progress'] = 0
         
-        # Step 1: Extract text from PDF
-        conversion_jobs[job_id]['current_step'] = 'Extracting text from PDF...'
-        conversion_jobs[job_id]['progress'] = 20
+        # Step 1: Extract text from document
+        conversion_jobs[job_id]['current_step'] = 'Reading document...'
+        conversion_jobs[job_id]['progress'] = 10
         
-        text = read_pdf_text(pdf_path, start_page, end_page)
-        if not text:
-            raise Exception("No text found in PDF")
+        # Use enhanced document converter if available
+        use_ocr = options.get('use_ocr', False)
         
-        # Step 2: Initialize TTS engine
+        if DOCUMENT_CONVERTER_AVAILABLE:
+            text, doc_info = document_converter.convert(pdf_path, start_page, end_page, use_ocr=use_ocr)
+            conversion_jobs[job_id]['document_info'] = {
+                'page_count': doc_info.page_count,
+                'word_count': doc_info.word_count,
+                'is_scanned': doc_info.is_scanned
+            }
+        else:
+            text = read_pdf_text(pdf_path, start_page, end_page)
+        
+        if not text or not text.strip():
+            raise Exception("No text found in document")
+        
+        conversion_jobs[job_id]['progress'] = 25
+        
+        # Step 2: Process text with AI enhancements
+        conversion_jobs[job_id]['current_step'] = 'Processing text...'
+        conversion_jobs[job_id]['progress'] = 35
+        
+        if TEXT_PROCESSOR_AVAILABLE:
+            processing_options = {
+                'expand_tech_terms': options.get('expand_tech_terms', True),
+                'add_pauses': options.get('add_pauses', True),
+            }
+            text = text_processor.process(text, processing_options)
+            
+            # Analyze content
+            analysis = content_analyzer.analyze(text)
+            conversion_jobs[job_id]['analysis'] = {
+                'word_count': analysis['word_count'],
+                'estimated_duration': analysis['estimated_audio_duration'],
+                'language': analysis['language']
+            }
+        
+        conversion_jobs[job_id]['progress'] = 45
+        
+        # Step 3: Initialize TTS engine
         conversion_jobs[job_id]['current_step'] = 'Initializing text-to-speech...'
-        conversion_jobs[job_id]['progress'] = 40
+        conversion_jobs[job_id]['progress'] = 50
         
         engine = pyttsx3.init()
         
-        # Step 3: Convert to speech
-        conversion_jobs[job_id]['current_step'] = 'Converting text to speech...'
+        # Step 4: Convert to speech
+        conversion_jobs[job_id]['current_step'] = 'Generating speech...'
         conversion_jobs[job_id]['progress'] = 60
         
         # Create temporary WAV file
@@ -99,10 +164,31 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
         
         synth_to_wav(engine, text, temp_wav, rate=rate, voice=str(voice_index) if voice_index != 'default' else None)
         
-        # Step 4: Convert to MP3 if requested
+        conversion_jobs[job_id]['progress'] = 75
+        
+        # Step 5: Process audio with enhancements
+        if AUDIO_PROCESSOR_AVAILABLE and os.path.exists(temp_wav):
+            conversion_jobs[job_id]['current_step'] = 'Enhancing audio...'
+            conversion_jobs[job_id]['progress'] = 80
+            
+            # Normalize audio volume
+            if options.get('normalize_audio', True):
+                try:
+                    audio_processor.normalize_audio(temp_wav)
+                except Exception as e:
+                    app.logger.warning(f"Audio normalization failed: {e}")
+            
+            # Trim silence
+            if options.get('trim_silence', False):
+                try:
+                    audio_processor.trim_silence(temp_wav)
+                except Exception as e:
+                    app.logger.warning(f"Silence trimming failed: {e}")
+        
+        # Step 6: Convert to MP3 if requested
         if output_format == 'mp3':
             conversion_jobs[job_id]['current_step'] = 'Converting to MP3...'
-            conversion_jobs[job_id]['progress'] = 80
+            conversion_jobs[job_id]['progress'] = 85
             try:
                 wav_to_mp3(temp_wav, output_path)
                 # Clean up temporary WAV file
@@ -115,11 +201,27 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
                     os.rename(temp_wav, output_path.replace('.mp3', '.wav'))
                     conversion_jobs[job_id]['output_format'] = 'wav'
         
-        # Step 5: Complete
+        # Step 7: Complete
+        # Determine the actual output file (may be WAV if MP3 conversion failed)
+        final_output = output_path if os.path.exists(output_path) else output_path.replace('.mp3', '.wav')
+        
         conversion_jobs[job_id]['status'] = 'completed'
         conversion_jobs[job_id]['current_step'] = 'Conversion completed!'
         conversion_jobs[job_id]['progress'] = 100
-        conversion_jobs[job_id]['output_file'] = os.path.basename(output_path)
+        conversion_jobs[job_id]['output_file'] = os.path.basename(final_output)  # Use actual file
+        
+        # Get audio metadata if available
+        if AUDIO_PROCESSOR_AVAILABLE and os.path.exists(final_output):
+            try:
+                metadata = audio_processor.get_metadata(final_output)
+                conversion_jobs[job_id]['audio_metadata'] = {
+                    'duration': metadata.duration_formatted,
+                    'duration_seconds': metadata.duration_seconds,
+                    'file_size': metadata.file_size_formatted,
+                    'format': metadata.format
+                }
+            except Exception as e:
+                app.logger.warning(f"Could not get audio metadata: {e}")
         
         engine.stop()
         
@@ -149,13 +251,13 @@ def upload_file():
             return jsonify({'error': 'No file selected'}), 400
         
         if not allowed_file(file.filename):
-            return jsonify({'error': 'Only PDF files are allowed'}), 400
+            return jsonify({'error': 'Unsupported file format. Supported: PDF, DOCX, TXT, EPUB, HTML, Images'}), 400
         
         # Get form parameters
         voice_index = request.form.get('voice', 'default')
         try:
             rate = int(request.form.get('rate', 180))
-            rate = max(100, min(300, rate))  # Clamp between 100-300
+            rate = max(80, min(350, rate))  # Clamp between 80-350
         except (ValueError, TypeError):
             rate = 180
             
@@ -173,15 +275,25 @@ def upload_file():
             except (ValueError, TypeError):
                 pass
                 
-        output_format = request.form.get('format', 'wav')
+        output_format = request.form.get('format', 'mp3')
         if output_format not in ['wav', 'mp3']:
-            output_format = 'wav'
+            output_format = 'mp3'
+        
+        # Get advanced options
+        options = {
+            'use_ocr': request.form.get('use_ocr', 'false').lower() == 'true',
+            'expand_tech_terms': request.form.get('expand_tech_terms', 'true').lower() == 'true',
+            'add_pauses': request.form.get('add_pauses', 'true').lower() == 'true',
+            'normalize_audio': request.form.get('normalize_audio', 'true').lower() == 'true',
+            'trim_silence': request.form.get('trim_silence', 'false').lower() == 'true',
+            'quality': request.form.get('quality', '192'),
+        }
         
         # Save uploaded file
         filename = secure_filename(file.filename)
         job_id = str(uuid.uuid4())
-        pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{job_id}_{filename}")
-        file.save(pdf_path)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{job_id}_{filename}")
+        file.save(file_path)
         
         # Prepare output file
         output_filename = f"{job_id}_{os.path.splitext(filename)[0]}.{output_format}"
@@ -194,13 +306,14 @@ def upload_file():
             'current_step': 'Queued for processing...',
             'created_at': datetime.now(),
             'pdf_filename': filename,
-            'output_format': output_format
+            'output_format': output_format,
+            'options': options
         }
         
         # Start conversion in background thread
         thread = threading.Thread(
             target=convert_pdf_to_audio,
-            args=(job_id, pdf_path, output_path, voice_index, rate, start_page, end_page, output_format)
+            args=(job_id, file_path, output_path, voice_index, rate, start_page, end_page, output_format, options)
         )
         thread.daemon = True
         thread.start()
@@ -293,6 +406,120 @@ def cleanup_old_files():
     except Exception as e:
         app.logger.error(f"Cleanup failed: {e}")
         return jsonify({'error': 'Cleanup failed'}), 500
+
+
+# ==================== NEW API ENDPOINTS ====================
+
+@app.route('/api/features')
+def get_features():
+    """Get available features based on installed modules"""
+    return jsonify({
+        'text_processing': TEXT_PROCESSOR_AVAILABLE,
+        'audio_processing': AUDIO_PROCESSOR_AVAILABLE,
+        'document_converter': DOCUMENT_CONVERTER_AVAILABLE,
+        'job_queue': JOB_QUEUE_AVAILABLE,
+        'supported_formats': list(ALLOWED_EXTENSIONS),
+        'max_file_size_mb': app.config['MAX_CONTENT_LENGTH'] // (1024 * 1024),
+    })
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_document():
+    """Analyze document and return metadata without conversion"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Unsupported file format'}), 400
+        
+        # Save temporarily
+        filename = secure_filename(file.filename)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{uuid.uuid4()}_{filename}")
+        file.save(temp_path)
+        
+        try:
+            result = {}
+            
+            # Get document info
+            if DOCUMENT_CONVERTER_AVAILABLE:
+                text, doc_info = document_converter.convert(temp_path)
+                result['document'] = {
+                    'format': doc_info.format.value,
+                    'page_count': doc_info.page_count,
+                    'word_count': doc_info.word_count,
+                    'has_images': doc_info.has_images,
+                    'has_tables': doc_info.has_tables,
+                    'is_scanned': doc_info.is_scanned,
+                    'title': doc_info.title,
+                    'author': doc_info.author
+                }
+                
+                # Analyze content
+                if TEXT_PROCESSOR_AVAILABLE:
+                    analysis = content_analyzer.analyze(text)
+                    result['analysis'] = {
+                        'word_count': analysis['word_count'],
+                        'sentence_count': analysis['sentence_count'],
+                        'paragraph_count': analysis['paragraph_count'],
+                        'estimated_audio_duration': analysis['estimated_audio_duration'],
+                        'estimated_minutes': analysis['estimated_minutes'],
+                        'language': analysis['language'],
+                        'chapter_count': analysis['chapter_count'],
+                        'chapters': analysis['chapters'][:10],  # Limit to first 10 chapters
+                    }
+            else:
+                # Basic analysis
+                text = read_pdf_text(temp_path)
+                result['document'] = {
+                    'word_count': len(text.split()) if text else 0
+                }
+            
+            return jsonify(result)
+            
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
+    except Exception as e:
+        app.logger.error(f"Analysis failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/voices')
+def get_voices_api():
+    """Get available voices as JSON"""
+    voices = get_available_voices()
+    return jsonify({
+        'voices': voices,
+        'default_voice': 0 if voices else None
+    })
+
+
+@app.route('/api/stats')
+def get_stats():
+    """Get conversion statistics"""
+    total_jobs = len(conversion_jobs)
+    completed = sum(1 for j in conversion_jobs.values() if j['status'] == 'completed')
+    failed = sum(1 for j in conversion_jobs.values() if j['status'] == 'failed')
+    processing = sum(1 for j in conversion_jobs.values() if j['status'] == 'processing')
+    queued = sum(1 for j in conversion_jobs.values() if j['status'] == 'queued')
+    
+    return jsonify({
+        'total_jobs': total_jobs,
+        'completed': completed,
+        'failed': failed,
+        'processing': processing,
+        'queued': queued,
+        'features': {
+            'text_processing': TEXT_PROCESSOR_AVAILABLE,
+            'audio_processing': AUDIO_PROCESSOR_AVAILABLE,
+            'document_converter': DOCUMENT_CONVERTER_AVAILABLE,
+        }
+    })
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
