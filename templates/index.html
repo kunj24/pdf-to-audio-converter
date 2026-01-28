@@ -352,6 +352,78 @@
             border: 1px solid var(--gray-200);
         }
 
+        /* Toggle Group Styles */
+        .toggle-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .toggle-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .toggle-label {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+        }
+
+        /* Document Analysis Styles */
+        .document-analysis {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .analysis-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .analysis-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .analysis-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: block;
+        }
+
+        .analysis-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         .setting-label {
             font-weight: 600;
             color: var(--dark);
@@ -1141,17 +1213,17 @@
                 <div class="card-body-custom">
                     <div class="upload-zone" id="uploadZone">
                         <div class="upload-icon">
-                            <i class="fas fa-file-pdf"></i>
+                            <i class="fas fa-file-alt"></i>
                         </div>
-                        <h3 class="upload-title">Drag & Drop your PDF here</h3>
-                        <p class="upload-subtitle">or click to browse • Maximum 16MB</p>
+                        <h3 class="upload-title">Drag & Drop your document here</h3>
+                        <p class="upload-subtitle">Supports PDF, DOCX, TXT, EPUB, HTML, Images • Maximum 50MB</p>
                         <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
                             <i class="fas fa-folder-open"></i> Browse Files
                         </button>
-                        <input type="file" id="fileInput" name="file" accept=".pdf" hidden>
+                        <input type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt,.epub,.html,.htm,.jpg,.jpeg,.png,.bmp,.tiff" hidden>
                         
                         <div class="file-info" id="fileInfo" style="display: none;">
-                            <i class="fas fa-file-pdf"></i>
+                            <i class="fas fa-file" id="fileIcon"></i>
                             <div class="file-details">
                                 <div class="file-name" id="fileName">document.pdf</div>
                                 <div class="file-size" id="fileSize">2.4 MB</div>
@@ -1159,6 +1231,32 @@
                             <button type="button" class="file-remove" id="fileRemove">
                                 <i class="fas fa-times"></i>
                             </button>
+                        </div>
+                        
+                        <!-- Document Analysis Results -->
+                        <div class="document-analysis" id="documentAnalysis" style="display: none;">
+                            <div class="analysis-grid">
+                                <div class="analysis-item">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span id="analysisPages">-</span>
+                                    <small>Pages</small>
+                                </div>
+                                <div class="analysis-item">
+                                    <i class="fas fa-font"></i>
+                                    <span id="analysisWords">-</span>
+                                    <small>Words</small>
+                                </div>
+                                <div class="analysis-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span id="analysisDuration">-</span>
+                                    <small>Est. Duration</small>
+                                </div>
+                                <div class="analysis-item">
+                                    <i class="fas fa-language"></i>
+                                    <span id="analysisLanguage">-</span>
+                                    <small>Language</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1274,6 +1372,66 @@
                 </div>
             </div>
 
+            <!-- Advanced Settings Card -->
+            <div class="card-glass mb-4">
+                <div class="card-header-custom" style="cursor: pointer;" onclick="toggleAdvancedSettings()">
+                    <h5><i class="fas fa-cogs"></i> Advanced Settings <i class="fas fa-chevron-down" id="advancedToggle" style="margin-left: auto; transition: transform 0.3s;"></i></h5>
+                </div>
+                <div class="card-body-custom" id="advancedSettings" style="display: none;">
+                    <div class="settings-grid">
+                        <!-- AI Text Processing -->
+                        <div class="setting-card">
+                            <label class="setting-label">
+                                <i class="fas fa-brain"></i> AI Text Processing
+                            </label>
+                            <div class="toggle-group">
+                                <label class="toggle-item">
+                                    <input type="checkbox" name="expand_tech_terms" id="expandTechTerms" checked>
+                                    <span class="toggle-label">Expand tech terms (API → A P I)</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" name="add_pauses" id="addPauses" checked>
+                                    <span class="toggle-label">Add natural pauses</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Audio Enhancements -->
+                        <div class="setting-card">
+                            <label class="setting-label">
+                                <i class="fas fa-magic"></i> Audio Enhancements
+                            </label>
+                            <div class="toggle-group">
+                                <label class="toggle-item">
+                                    <input type="checkbox" name="normalize_audio" id="normalizeAudio" checked>
+                                    <span class="toggle-label">Normalize volume</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" name="trim_silence" id="trimSilence">
+                                    <span class="toggle-label">Trim silence</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- OCR for Scanned Documents -->
+                        <div class="setting-card">
+                            <label class="setting-label">
+                                <i class="fas fa-eye"></i> OCR (Scanned Documents)
+                            </label>
+                            <div class="toggle-group">
+                                <label class="toggle-item">
+                                    <input type="checkbox" name="use_ocr" id="useOcr">
+                                    <span class="toggle-label">Use OCR for image-based PDFs</span>
+                                </label>
+                                <small style="color: var(--gray-500); display: block; margin-top: 0.5rem;">
+                                    Enable this if your PDF contains scanned pages or images with text
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Convert Button -->
             <div class="convert-section">
                 <button type="submit" class="convert-btn" id="convertBtn">
@@ -1297,20 +1455,20 @@
                 </div>
                 <div class="progress-steps">
                     <div class="progress-step">
-                        <div class="step-icon" id="step1"><i class="fas fa-file-pdf"></i></div>
-                        <span class="step-label">Reading PDF</span>
+                        <div class="step-icon" id="step1"><i class="fas fa-file-alt"></i></div>
+                        <span class="step-label">Reading Document</span>
                     </div>
                     <div class="progress-step">
-                        <div class="step-icon" id="step2"><i class="fas fa-font"></i></div>
-                        <span class="step-label">Extracting Text</span>
+                        <div class="step-icon" id="step2"><i class="fas fa-brain"></i></div>
+                        <span class="step-label">Processing Text</span>
                     </div>
                     <div class="progress-step">
                         <div class="step-icon" id="step3"><i class="fas fa-volume-up"></i></div>
                         <span class="step-label">Generating Speech</span>
                     </div>
                     <div class="progress-step">
-                        <div class="step-icon" id="step4"><i class="fas fa-file-audio"></i></div>
-                        <span class="step-label">Creating Audio</span>
+                        <div class="step-icon" id="step4"><i class="fas fa-wand-magic-sparkles"></i></div>
+                        <span class="step-label">Enhancing Audio</span>
                     </div>
                     <div class="progress-step">
                         <div class="step-icon" id="step5"><i class="fas fa-check"></i></div>
@@ -1471,6 +1629,19 @@
             icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
         }
 
+        // Advanced Settings Toggle
+        function toggleAdvancedSettings() {
+            const settings = document.getElementById('advancedSettings');
+            const toggle = document.getElementById('advancedToggle');
+            if (settings.style.display === 'none') {
+                settings.style.display = 'block';
+                toggle.style.transform = 'rotate(180deg)';
+            } else {
+                settings.style.display = 'none';
+                toggle.style.transform = 'rotate(0deg)';
+            }
+        }
+
         // File Upload
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
@@ -1498,11 +1669,15 @@
             e.preventDefault();
             uploadZone.classList.remove('dragover');
             const files = e.dataTransfer.files;
-            if (files.length > 0 && files[0].type === 'application/pdf') {
-                handleFile(files[0]);
-                fileInput.files = files;
-            } else {
-                alert('Please upload a PDF file.');
+            if (files.length > 0) {
+                const allowedExtensions = ['pdf', 'docx', 'doc', 'txt', 'epub', 'html', 'htm', 'jpg', 'jpeg', 'png', 'bmp', 'tiff'];
+                const ext = files[0].name.split('.').pop().toLowerCase();
+                if (allowedExtensions.includes(ext)) {
+                    handleFile(files[0]);
+                    fileInput.files = files;
+                } else {
+                    alert('Unsupported file format. Please upload PDF, DOC, DOCX, TXT, EPUB, HTML, or image files.');
+                }
             }
         });
         
@@ -1517,6 +1692,89 @@
             fileSize.textContent = formatFileSize(file.size);
             fileInfo.style.display = 'flex';
             uploadZone.classList.add('has-file');
+            
+            // Update file icon based on type
+            const fileIcon = document.querySelector('.file-icon i');
+            const ext = file.name.split('.').pop().toLowerCase();
+            const iconMap = {
+                'pdf': 'fa-file-pdf',
+                'docx': 'fa-file-word',
+                'doc': 'fa-file-word',
+                'txt': 'fa-file-alt',
+                'epub': 'fa-book',
+                'html': 'fa-file-code',
+                'htm': 'fa-file-code',
+                'jpg': 'fa-file-image',
+                'jpeg': 'fa-file-image',
+                'png': 'fa-file-image',
+                'bmp': 'fa-file-image',
+                'tiff': 'fa-file-image'
+            };
+            fileIcon.className = 'fas ' + (iconMap[ext] || 'fa-file');
+            
+            // Perform document analysis
+            analyzeDocument(file);
+        }
+        
+        async function analyzeDocument(file) {
+            const analysisSection = document.getElementById('documentAnalysis');
+            const analysisContent = document.getElementById('analysisContent');
+            
+            // Show loading state
+            analysisSection.style.display = 'block';
+            analysisContent.innerHTML = '<div style="text-align: center; padding: 1rem;"><i class="fas fa-spinner fa-spin"></i> Analyzing document...</div>';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    analysisContent.innerHTML = `
+                        <div class="analysis-grid">
+                            <div class="analysis-item">
+                                <span class="analysis-value">${data.pages || '-'}</span>
+                                <span class="analysis-label">Pages</span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-value">${formatNumber(data.words) || '-'}</span>
+                                <span class="analysis-label">Words</span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-value">${data.estimated_duration || '-'}</span>
+                                <span class="analysis-label">Est. Duration</span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-value">${data.language || '-'}</span>
+                                <span class="analysis-label">Language</span>
+                            </div>
+                        </div>
+                        ${data.is_scanned ? '<div style="margin-top: 1rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.1); border-radius: 8px; color: #d97706; font-size: 0.875rem;"><i class="fas fa-exclamation-triangle"></i> This appears to be a scanned document. OCR will be enabled for best results.</div>' : ''}
+                    `;
+                    
+                    // Auto-enable OCR for scanned documents
+                    if (data.is_scanned) {
+                        document.getElementById('useOcr').checked = true;
+                    }
+                } else {
+                    analysisContent.innerHTML = '<div style="color: var(--gray-500); text-align: center; padding: 1rem;">Analysis unavailable</div>';
+                }
+            } catch (error) {
+                console.log('Document analysis not available');
+                analysisContent.innerHTML = '<div style="color: var(--gray-500); text-align: center; padding: 1rem;">Analysis unavailable</div>';
+            }
+        }
+        
+        function formatNumber(num) {
+            if (!num) return null;
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
         }
         
         fileRemove.addEventListener('click', (e) => {
@@ -1524,6 +1782,7 @@
             fileInput.value = '';
             fileInfo.style.display = 'none';
             uploadZone.classList.remove('has-file');
+            document.getElementById('documentAnalysis').style.display = 'none';
         });
         
         function formatFileSize(bytes) {
@@ -1608,7 +1867,7 @@
             e.preventDefault();
             
             if (!fileInput.files || !fileInput.files[0]) {
-                alert('Please select a PDF file first.');
+                alert('Please select a document first.');
                 return;
             }
             
