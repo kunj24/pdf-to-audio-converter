@@ -248,9 +248,12 @@ def download_file(job_id):
         if not os.path.exists(file_path):
             return "File not found", 404
         
+        # Check if it's a download request or streaming request
+        is_download = request.args.get('download', 'true').lower() == 'true'
+        
         return send_file(
             file_path,
-            as_attachment=True,
+            as_attachment=is_download,
             download_name=f"converted_{job['pdf_filename'].replace('.pdf', '')}.{job['output_format']}",
             mimetype='audio/wav' if job['output_format'] == 'wav' else 'audio/mpeg'
         )
