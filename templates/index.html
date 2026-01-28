@@ -1,394 +1,1610 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF to Audio Converter</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>PDF to Audio Pro | Convert Documents to Speech</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #0ea5e9;
+            --accent: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            --gradient-3: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        [data-theme="dark"] {
+            --dark: #f8fafc;
+            --darker: #ffffff;
+            --light: #0f172a;
+            --gray-100: #1e293b;
+            --gray-200: #334155;
+            --gray-300: #475569;
+            --gray-400: #64748b;
+            --gray-500: #94a3b8;
+            --gray-600: #cbd5e1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--light);
+            color: var(--dark);
             min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s ease;
         }
-        
-        .main-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            margin: 2rem auto;
-            max-width: 800px;
+
+        [data-theme="dark"] body {
+            background: #0f172a;
         }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        /* Navbar */
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        [data-theme="dark"] .navbar-custom {
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 2px solid var(--gray-200);
+            background: var(--light);
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero-section {
+            background: var(--gradient-2);
+            padding: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
             color: white;
-            border-radius: 20px 20px 0 0;
-            padding: 2rem;
             text-align: center;
         }
-        
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 15px;
-            padding: 3rem;
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: -3rem auto 3rem;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Cards */
+        .card-glass {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .card-glass {
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        .card-glass:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 30px 60px -12px rgb(0 0 0 / 0.3);
+        }
+
+        .card-header-custom {
+            background: var(--gray-100);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .card-header-custom h5 {
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-header-custom h5 i {
+            color: var(--primary);
+        }
+
+        .card-body-custom {
+            padding: 2rem;
+        }
+
+        /* Upload Area */
+        .upload-zone {
+            border: 3px dashed var(--gray-300);
+            border-radius: 20px;
+            padding: 4rem 2rem;
             text-align: center;
             transition: all 0.3s ease;
             cursor: pointer;
-            margin: 2rem 0;
+            background: linear-gradient(135deg, var(--gray-100) 0%, transparent 100%);
+            position: relative;
+            overflow: hidden;
         }
-        
-        .upload-area:hover {
-            border-color: #764ba2;
-            background: rgba(102, 126, 234, 0.05);
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
-        
-        .upload-area.dragover {
-            border-color: #28a745;
-            background: rgba(40, 167, 69, 0.1);
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            transform: scale(1.01);
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 25px;
-            padding: 12px 30px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+
+        .upload-zone:hover::before {
+            opacity: 0.05;
         }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+
+        .upload-zone.dragover {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+            transform: scale(1.02);
         }
-        
-        .progress {
-            height: 25px;
-            border-radius: 15px;
-            background: rgba(0, 0, 0, 0.1);
+
+        .upload-zone.has-file {
+            border-color: var(--success);
+            border-style: solid;
+            background: rgba(16, 185, 129, 0.05);
         }
-        
-        .progress-bar {
-            border-radius: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.5s ease;
+
+        .upload-icon {
+            width: 100px;
+            height: 100px;
+            background: var(--gradient-2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
         }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-        }
-        
-        .form-control, .form-select {
-            border-radius: 10px;
-            border: 2px solid #e0e6ed;
-            padding: 12px 15px;
-            transition: all 0.3s ease;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-        }
-        
-        .status-message {
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-        }
-        
-        .status-processing {
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            color: #1976d2;
-        }
-        
-        .status-completed {
-            background: #e8f5e8;
-            border: 1px solid #4caf50;
-            color: #388e3c;
-        }
-        
-        .status-error {
-            background: #ffebee;
-            border: 1px solid #f44336;
-            color: #d32f2f;
-        }
-        
-        .download-section {
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        .download-btn {
-            background: white;
-            color: #4caf50;
-            border: none;
-            border-radius: 25px;
-            padding: 12px 30px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-        
-        .download-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
-            color: #4caf50;
-        }
-        
-        .feature-icon {
+
+        .upload-icon i {
             font-size: 2.5rem;
-            color: #667eea;
+            color: white;
+        }
+
+        .upload-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtitle {
+            color: var(--gray-500);
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-btn {
+            background: var(--gradient-2);
+            color: white;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 12px;
+            margin-top: 1.5rem;
+        }
+
+        .file-info i {
+            font-size: 2rem;
+            color: var(--danger);
+        }
+
+        .file-details {
+            flex: 1;
+            text-align: left;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .file-size {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .file-remove {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--danger);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-remove:hover {
+            transform: scale(1.1);
+        }
+
+        /* Settings Panel */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .setting-card {
+            background: var(--gray-100);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .setting-label {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .setting-label i {
+            color: var(--primary);
+        }
+
+        /* Custom Select */
+        .select-custom {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            background: var(--light);
+            color: var(--dark);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.25rem;
+        }
+
+        .select-custom:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Range Slider */
+        .range-container {
+            position: relative;
+        }
+
+        .range-value {
+            position: absolute;
+            top: -2rem;
+            right: 0;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .range-custom {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--gray-200);
+            outline: none;
+            -webkit-appearance: none;
+            margin-top: 0.5rem;
+        }
+
+        .range-custom::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--gradient-2);
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .range-custom::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        /* Voice Cards */
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .voice-card {
+            background: var(--light);
+            border: 2px solid var(--gray-200);
+            border-radius: 16px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .voice-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .voice-card.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        }
+
+        .voice-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .voice-avatar.male {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .voice-avatar.female {
+            background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+            color: white;
+        }
+
+        .voice-name {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .voice-lang {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .voice-preview-btn {
+            margin-top: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .voice-preview-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Format Selection */
+        .format-options {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .format-option {
+            flex: 1;
+            min-width: 120px;
+            padding: 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--light);
+        }
+
+        .format-option:hover {
+            border-color: var(--primary);
+        }
+
+        .format-option.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        }
+
+        .format-option i {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .format-name {
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .format-desc {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        /* Convert Button */
+        .convert-section {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .convert-btn {
+            background: var(--gradient-2);
+            color: white;
+            border: none;
+            padding: 1.25rem 4rem;
+            border-radius: 16px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 50px rgba(99, 102, 241, 0.4);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Progress Section */
+        .progress-section {
+            background: var(--gray-100);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 1rem;
         }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+
+        .progress-title {
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-percentage {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .progress-bar-container {
+            height: 12px;
+            background: var(--gray-200);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--gradient-2);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-400);
+            transition: all 0.3s ease;
+        }
+
+        .step-icon.active {
+            background: var(--gradient-2);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .step-icon.completed {
+            background: var(--success);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .step-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            text-align: center;
+        }
+
+        /* Result Section */
+        .result-section {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+            border: 2px solid var(--success);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            animation: bounceIn 0.5s ease;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .result-icon i {
+            font-size: 2.5rem;
+            color: white;
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .result-subtitle {
+            color: var(--gray-500);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Audio Player */
+        .audio-player {
+            background: var(--dark);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        [data-theme="dark"] .audio-player {
+            background: var(--gray-100);
+        }
+
+        .audio-player audio {
+            width: 100%;
+            height: 50px;
+        }
+
+        .audio-info {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            color: var(--gray-400);
+            font-size: 0.875rem;
+        }
+
+        .audio-info span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Download Buttons */
+        .download-options {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .download-btn {
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .download-btn.primary {
+            background: var(--gradient-2);
+            color: white;
+            border: none;
+        }
+
+        .download-btn.secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 4rem 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--gray-500);
+            margin-bottom: 3rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--light);
+            border: 1px solid var(--gray-200);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .feature-card {
+            background: var(--gray-100);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 1.75rem;
+        }
+
+        .feature-icon.purple {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+            color: var(--primary);
+        }
+
+        .feature-icon.blue {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%);
+            color: var(--secondary);
+        }
+
+        .feature-icon.orange {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%);
+            color: var(--accent);
+        }
+
+        .feature-icon.green {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+            color: var(--success);
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-desc {
+            color: var(--gray-500);
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--darker);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        [data-theme="dark"] .footer {
+            background: var(--gray-100);
+            color: var(--dark);
+        }
+
+        .footer p {
+            opacity: 0.7;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+
+            .upload-zone {
+                padding: 2rem 1rem;
+            }
+
+            .convert-btn {
+                padding: 1rem 2rem;
+                font-size: 1rem;
+            }
+
+            .progress-steps {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
-        
-        .feature-card {
+
+        /* Tooltips */
+        .tooltip-custom {
+            position: relative;
+        }
+
+        .tooltip-custom::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .tooltip-custom:hover::after {
+            opacity: 1;
+            visibility: visible;
+            bottom: calc(100% + 10px);
+        }
+
+        /* Page Range Inputs */
+        .page-range-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .page-input {
+            flex: 1;
+        }
+
+        .page-input input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            background: var(--light);
+            color: var(--dark);
+            font-size: 1rem;
+            font-weight: 500;
             text-align: center;
-            padding: 1.5rem;
+        }
+
+        .page-input input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .page-separator {
+            color: var(--gray-400);
+            font-weight: 600;
+        }
+
+        /* Quality Options */
+        .quality-options {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .quality-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            background: var(--light);
+            color: var(--gray-500);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quality-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .quality-btn.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        /* History Section */
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--gray-100);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            background: var(--gradient-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .history-details {
+            flex: 1;
+        }
+
+        .history-name {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .history-meta {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .history-download {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            background: var(--success);
+            color: white;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="main-container">
-            <!-- Header -->
-            <div class="header">
-                <h1><i class="fas fa-file-audio"></i> PDF to Audio Converter</h1>
-                <p class="mb-0">Transform your PDF documents into spoken audio files</p>
-            </div>
-            
-            <!-- Main Content -->
-            <div class="p-4">
-                <!-- Upload Form -->
-                <form id="uploadForm" enctype="multipart/form-data">
-                    <div class="upload-area" id="uploadArea">
-                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
-                        <h4>Drop your PDF file here or click to browse</h4>
-                        <p class="text-muted">Supports PDF files up to 16MB</p>
-                        <input type="file" id="fileInput" name="file" accept=".pdf" class="d-none">
-                        <div id="selectedFile" class="mt-3" style="display: none;">
-                            <i class="fas fa-file-pdf text-danger"></i>
-                            <span id="fileName"></span>
-                        </div>
-                    </div>
-                    
-                    <!-- Settings -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title"><i class="fas fa-microphone"></i> Voice Settings</h5>
-                                    
-                                    <div class="mb-3">
-                                        <label for="voiceSelect" class="form-label">Voice</label>
-                                        <select id="voiceSelect" name="voice" class="form-select">
-                                            {% for voice in voices %}
-                                            <option value="{{ voice.index }}">{{ voice.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="rateSlider" class="form-label">Speech Rate: <span id="rateValue">180</span> WPM</label>
-                                        <input type="range" id="rateSlider" name="rate" class="form-range" min="100" max="300" value="180">
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="formatSelect" class="form-label">Output Format</label>
-                                        <select id="formatSelect" name="format" class="form-select">
-                                            <option value="wav">WAV (Recommended)</option>
-                                            <option value="mp3">MP3 (Requires FFmpeg)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title"><i class="fas fa-book"></i> Page Settings</h5>
-                                    
-                                    <div class="mb-3">
-                                        <label for="startPage" class="form-label">Start Page (Optional)</label>
-                                        <input type="number" id="startPage" name="start_page" class="form-control" min="1" placeholder="1">
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="endPage" class="form-label">End Page (Optional)</label>
-                                        <input type="number" id="endPage" name="end_page" class="form-control" min="1" placeholder="Last page">
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <small class="text-muted">Leave blank to convert entire document</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Convert Button -->
-                    <div class="text-center mt-4">
-                        <button type="submit" id="convertBtn" class="btn btn-primary btn-lg">
-                            <i class="fas fa-magic"></i> Convert to Audio
-                        </button>
-                    </div>
-                </form>
-                
-                <!-- Progress Section -->
-                <div id="progressSection" style="display: none;" class="mt-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-cogs"></i> Conversion Progress</h5>
-                            <div class="progress mb-3">
-                                <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                    0%
-                                </div>
-                            </div>
-                            <div id="statusMessage" class="status-message">
-                                <i class="loading-spinner"></i> Starting conversion...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Download Section -->
-                <div id="downloadSection" style="display: none;" class="mt-4">
-                    <div class="download-section">
-                        <h4><i class="fas fa-download"></i> Your Audio is Ready!</h4>
-                        <p>Click the button below to download your converted audio file</p>
-                        <a id="downloadBtn" href="#" class="download-btn">
-                            <i class="fas fa-download"></i> Download Audio File
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Features -->
-                <div class="row mt-5">
-                    <div class="col-md-4 feature-card">
-                        <i class="fas fa-volume-up feature-icon"></i>
-                        <h5>High Quality Audio</h5>
-                        <p class="text-muted">Uses Windows built-in voices for natural speech synthesis</p>
-                    </div>
-                    <div class="col-md-4 feature-card">
-                        <i class="fas fa-shield-alt feature-icon"></i>
-                        <h5>Privacy Focused</h5>
-                        <p class="text-muted">All processing happens locally - your files never leave the server</p>
-                    </div>
-                    <div class="col-md-4 feature-card">
-                        <i class="fas fa-bolt feature-icon"></i>
-                        <h5>Fast Processing</h5>
-                        <p class="text-muted">Quick conversion with real-time progress updates</p>
-                    </div>
+    <!-- Navbar -->
+    <nav class="navbar-custom">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="/" class="navbar-brand">
+                    <i class="fas fa-waveform-lines"></i> PDF to Audio Pro
+                </a>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="#features" class="text-decoration-none" style="color: var(--gray-500); font-weight: 500;">Features</a>
+                    <a href="#how-it-works" class="text-decoration-none" style="color: var(--gray-500); font-weight: 500;">How it Works</a>
+                    <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
                 </div>
             </div>
         </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <i class="fas fa-headphones"></i> Transform PDFs into Audio
+                </h1>
+                <p class="hero-subtitle">
+                    Convert your documents to high-quality speech with multiple voices, speeds, and formats. Perfect for learning, accessibility, and multitasking.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <!-- Upload Section -->
+            <div class="card-glass mb-4">
+                <div class="card-header-custom">
+                    <h5><i class="fas fa-cloud-arrow-up"></i> Upload Your PDF</h5>
+                </div>
+                <div class="card-body-custom">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <h3 class="upload-title">Drag & Drop your PDF here</h3>
+                        <p class="upload-subtitle">or click to browse • Maximum 16MB</p>
+                        <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                        <input type="file" id="fileInput" name="file" accept=".pdf" hidden>
+                        
+                        <div class="file-info" id="fileInfo" style="display: none;">
+                            <i class="fas fa-file-pdf"></i>
+                            <div class="file-details">
+                                <div class="file-name" id="fileName">document.pdf</div>
+                                <div class="file-size" id="fileSize">2.4 MB</div>
+                            </div>
+                            <button type="button" class="file-remove" id="fileRemove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Selection -->
+            <div class="card-glass mb-4">
+                <div class="card-header-custom">
+                    <h5><i class="fas fa-microphone-alt"></i> Choose Voice</h5>
+                </div>
+                <div class="card-body-custom">
+                    <p style="color: var(--gray-500); margin-bottom: 1rem;">Select a voice that suits your preference. Click to preview.</p>
+                    <div class="voice-grid" id="voiceGrid">
+                        {% for voice in voices %}
+                        <div class="voice-card {% if loop.index == 1 %}selected{% endif %}" data-voice="{{ voice.index }}">
+                            <div class="voice-avatar {% if 'David' in voice.name or 'Mark' in voice.name or 'James' in voice.name %}male{% else %}female{% endif %}">
+                                <i class="fas fa-{% if 'David' in voice.name or 'Mark' in voice.name or 'James' in voice.name %}mars{% else %}venus{% endif %}"></i>
+                            </div>
+                            <div class="voice-name">{{ voice.name | replace('Microsoft ', '') | replace(' Desktop', '') }}</div>
+                            <div class="voice-lang">
+                                {% if 'United States' in voice.name %}🇺🇸 English (US)
+                                {% elif 'Great Britain' in voice.name %}🇬🇧 English (UK)
+                                {% elif 'India' in voice.name %}🇮🇳 English (IN)
+                                {% else %}🌐 Default{% endif %}
+                            </div>
+                            <button type="button" class="voice-preview-btn" onclick="previewVoice({{ voice.index }}); event.stopPropagation();">
+                                <i class="fas fa-play"></i> Preview
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="voice" id="selectedVoice" value="0">
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="card-glass mb-4">
+                <div class="card-header-custom">
+                    <h5><i class="fas fa-sliders-h"></i> Audio Settings</h5>
+                </div>
+                <div class="card-body-custom">
+                    <div class="settings-grid">
+                        <!-- Speech Rate -->
+                        <div class="setting-card">
+                            <label class="setting-label">
+                                <i class="fas fa-tachometer-alt"></i> Speech Rate
+                            </label>
+                            <div class="range-container">
+                                <span class="range-value" id="rateDisplay">180 WPM</span>
+                                <input type="range" class="range-custom" id="rateSlider" name="rate" 
+                                       min="80" max="350" value="180">
+                                <div class="range-labels">
+                                    <span>Slow (80)</span>
+                                    <span>Normal (180)</span>
+                                    <span>Fast (350)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Output Format -->
+                        <div class="setting-card">
+                            <label class="setting-label">
+                                <i class="fas fa-file-audio"></i> Output Format
+                            </label>
+                            <div class="format-options">
+                                <div class="format-option selected" data-format="mp3">
+                                    <i class="fas fa-music"></i>
+                                    <div class="format-name">MP3</div>
+                                    <div class="format-desc">Compressed • Small size</div>
+                                </div>
+                                <div class="format-option" data-format="wav">
+                                    <i class="fas fa-wave-square"></i>
+                                    <div class="format-name">WAV</div>
+                                    <div class="format-desc">Lossless • Best quality</div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="format" id="selectedFormat" value="mp3">
+                        </div>
+
+                        <!-- Page Range -->
+                        <div class="setting-card">
+                            <label class="setting-label">
+                                <i class="fas fa-book-open"></i> Page Range
+                            </label>
+                            <div class="page-range-group">
+                                <div class="page-input">
+                                    <input type="number" name="start_page" id="startPage" min="1" placeholder="Start">
+                                </div>
+                                <span class="page-separator">to</span>
+                                <div class="page-input">
+                                    <input type="number" name="end_page" id="endPage" min="1" placeholder="End">
+                                </div>
+                            </div>
+                            <small style="color: var(--gray-500); margin-top: 0.5rem; display: block;">
+                                Leave empty to convert entire document
+                            </small>
+                        </div>
+
+                        <!-- Audio Quality (for MP3) -->
+                        <div class="setting-card" id="qualitySettings">
+                            <label class="setting-label">
+                                <i class="fas fa-star"></i> Audio Quality
+                            </label>
+                            <div class="quality-options">
+                                <button type="button" class="quality-btn" data-quality="128">128 kbps</button>
+                                <button type="button" class="quality-btn selected" data-quality="192">192 kbps</button>
+                                <button type="button" class="quality-btn" data-quality="256">256 kbps</button>
+                                <button type="button" class="quality-btn" data-quality="320">320 kbps</button>
+                            </div>
+                            <input type="hidden" name="quality" id="selectedQuality" value="192">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Convert Button -->
+            <div class="convert-section">
+                <button type="submit" class="convert-btn" id="convertBtn">
+                    <i class="fas fa-magic"></i> Convert to Audio
+                </button>
+                <p style="color: var(--gray-500); margin-top: 1rem; font-size: 0.875rem;">
+                    <i class="fas fa-lock"></i> Your files are processed locally and never stored
+                </p>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section" id="progressSection" style="display: none;">
+                <div class="progress-header">
+                    <div class="progress-title">
+                        <i class="fas fa-cog fa-spin"></i> Converting...
+                    </div>
+                    <div class="progress-percentage" id="progressPercent">0%</div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+                </div>
+                <div class="progress-steps">
+                    <div class="progress-step">
+                        <div class="step-icon" id="step1"><i class="fas fa-file-pdf"></i></div>
+                        <span class="step-label">Reading PDF</span>
+                    </div>
+                    <div class="progress-step">
+                        <div class="step-icon" id="step2"><i class="fas fa-font"></i></div>
+                        <span class="step-label">Extracting Text</span>
+                    </div>
+                    <div class="progress-step">
+                        <div class="step-icon" id="step3"><i class="fas fa-volume-up"></i></div>
+                        <span class="step-label">Generating Speech</span>
+                    </div>
+                    <div class="progress-step">
+                        <div class="step-icon" id="step4"><i class="fas fa-file-audio"></i></div>
+                        <span class="step-label">Creating Audio</span>
+                    </div>
+                    <div class="progress-step">
+                        <div class="step-icon" id="step5"><i class="fas fa-check"></i></div>
+                        <span class="step-label">Complete</span>
+                    </div>
+                </div>
+                <p id="statusText" style="text-align: center; color: var(--gray-500); margin-top: 1.5rem;">
+                    Initializing conversion...
+                </p>
+            </div>
+
+            <!-- Result Section -->
+            <div class="result-section" id="resultSection" style="display: none;">
+                <div class="result-icon">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 class="result-title">Conversion Complete!</h3>
+                <p class="result-subtitle">Your audio file is ready to download and play</p>
+                
+                <!-- Audio Player -->
+                <div class="audio-player">
+                    <audio id="audioPlayer" controls>
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div class="audio-info">
+                        <span><i class="fas fa-clock"></i> <span id="audioDuration">--:--</span></span>
+                        <span><i class="fas fa-file"></i> <span id="audioSize">-- MB</span></span>
+                        <span><i class="fas fa-music"></i> <span id="audioFormat">MP3</span></span>
+                    </div>
+                </div>
+
+                <!-- Download Options -->
+                <div class="download-options">
+                    <a href="#" class="download-btn primary" id="downloadBtn">
+                        <i class="fas fa-download"></i> Download Audio
+                    </a>
+                    <button type="button" class="download-btn secondary" id="newConversion">
+                        <i class="fas fa-plus"></i> New Conversion
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <h2 class="section-title">Powerful Features</h2>
+            <p class="section-subtitle">Everything you need for professional PDF to audio conversion</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon purple">
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                    <h4 class="feature-title">Multiple Voices</h4>
+                    <p class="feature-desc">Choose from various natural-sounding voices including male, female, and different accents.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon blue">
+                        <i class="fas fa-sliders-h"></i>
+                    </div>
+                    <h4 class="feature-title">Customizable Speed</h4>
+                    <p class="feature-desc">Adjust speech rate from 80 to 350 words per minute for your preferred listening pace.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon orange">
+                        <i class="fas fa-file-audio"></i>
+                    </div>
+                    <h4 class="feature-title">Multiple Formats</h4>
+                    <p class="feature-desc">Export your audio in MP3 for small file size or WAV for maximum quality.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon green">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h4 class="feature-title">100% Private</h4>
+                    <p class="feature-desc">All processing happens locally on the server. Your documents are never stored or shared.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon purple">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h4 class="feature-title">Page Selection</h4>
+                    <p class="feature-desc">Convert specific page ranges or the entire document based on your needs.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon blue">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h4 class="feature-title">Fast Processing</h4>
+                    <p class="feature-desc">Efficient conversion engine with real-time progress tracking and status updates.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" style="padding: 4rem 0; background: var(--gray-100);">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            <p class="section-subtitle">Convert your PDFs to audio in three simple steps</p>
+            
+            <div class="row justify-content-center mt-5">
+                <div class="col-md-4 text-center mb-4">
+                    <div style="width: 80px; height: 80px; background: var(--gradient-2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: white; font-size: 2rem;">1</div>
+                    <h4 style="font-weight: 700; color: var(--dark);">Upload PDF</h4>
+                    <p style="color: var(--gray-500);">Drag and drop or browse to upload your PDF document</p>
+                </div>
+                <div class="col-md-4 text-center mb-4">
+                    <div style="width: 80px; height: 80px; background: var(--gradient-2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: white; font-size: 2rem;">2</div>
+                    <h4 style="font-weight: 700; color: var(--dark);">Customize</h4>
+                    <p style="color: var(--gray-500);">Select voice, speed, format, and page range preferences</p>
+                </div>
+                <div class="col-md-4 text-center mb-4">
+                    <div style="width: 80px; height: 80px; background: var(--gradient-2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: white; font-size: 2rem;">3</div>
+                    <h4 style="font-weight: 700; color: var(--dark);">Download</h4>
+                    <p style="color: var(--gray-500);">Listen to preview and download your audio file</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p><i class="fas fa-headphones"></i> PDF to Audio Pro | Built with <i class="fas fa-heart" style="color: #ef4444;"></i> for Accessibility</p>
+            <p style="margin-top: 0.5rem; font-size: 0.875rem;">© 2026 All rights reserved. Powered by Python & Flask</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let currentJobId = null;
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
         
-        // File upload handling
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const selectedFile = document.getElementById('selectedFile');
-        const fileName = document.getElementById('fileName');
-        const uploadForm = document.getElementById('uploadForm');
-        const convertBtn = document.getElementById('convertBtn');
-        const progressSection = document.getElementById('progressSection');
-        const downloadSection = document.getElementById('downloadSection');
-        const progressBar = document.getElementById('progressBar');
-        const statusMessage = document.getElementById('statusMessage');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const rateSlider = document.getElementById('rateSlider');
-        const rateValue = document.getElementById('rateValue');
+        // Check saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
         
-        // Speech rate slider
-        rateSlider.addEventListener('input', function() {
-            rateValue.textContent = this.value;
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
         });
         
-        // Upload area click
-        uploadArea.addEventListener('click', () => {
-            if (!fileInput.disabled) {
+        function updateThemeIcon(theme) {
+            const icon = themeToggle.querySelector('i');
+            icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+
+        // File Upload
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const fileRemove = document.getElementById('fileRemove');
+        
+        uploadZone.addEventListener('click', (e) => {
+            if (e.target !== fileRemove && !fileRemove.contains(e.target)) {
                 fileInput.click();
             }
         });
         
-        // File selection
-        fileInput.addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                if (file.type === 'application/pdf') {
-                    fileName.textContent = file.name;
-                    selectedFile.style.display = 'block';
-                    uploadArea.style.borderColor = '#28a745';
-                    uploadArea.style.background = 'rgba(40, 167, 69, 0.1)';
-                } else {
-                    alert('Please select a PDF file.');
-                    this.value = '';
-                    selectedFile.style.display = 'none';
-                }
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                handleFile(files[0]);
+                fileInput.files = files;
+            } else {
+                alert('Please upload a PDF file.');
             }
         });
         
-        // Drag and drop
-        uploadArea.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('dragover');
-            
-            if (!fileInput.disabled) {
-                const files = e.dataTransfer.files;
-                if (files.length > 0 && files[0].type === 'application/pdf') {
-                    fileInput.files = files;
-                    const file = files[0];
-                    fileName.textContent = file.name;
-                    selectedFile.style.display = 'block';
-                    uploadArea.style.borderColor = '#28a745';
-                    uploadArea.style.background = 'rgba(40, 167, 69, 0.1)';
-                } else {
-                    alert('Please drop a PDF file.');
-                }
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFile(fileInput.files[0]);
             }
         });
         
-        // Form submission
-        uploadForm.addEventListener('submit', async function(e) {
+        function handleFile(file) {
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'flex';
+            uploadZone.classList.add('has-file');
+        }
+        
+        fileRemove.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            uploadZone.classList.remove('has-file');
+        });
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        // Voice Selection
+        const voiceCards = document.querySelectorAll('.voice-card');
+        const selectedVoiceInput = document.getElementById('selectedVoice');
+        
+        voiceCards.forEach(card => {
+            card.addEventListener('click', () => {
+                voiceCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedVoiceInput.value = card.dataset.voice;
+            });
+        });
+        
+        function previewVoice(voiceIndex) {
+            // Use Web Speech API for preview
+            const text = "Hello! This is a sample of my voice. I hope you like it!";
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = speechSynthesis.getVoices();
+            if (voices.length > voiceIndex) {
+                utterance.voice = voices[voiceIndex];
+            }
+            utterance.rate = parseFloat(document.getElementById('rateSlider').value) / 180;
+            speechSynthesis.cancel();
+            speechSynthesis.speak(utterance);
+        }
+
+        // Speech Rate
+        const rateSlider = document.getElementById('rateSlider');
+        const rateDisplay = document.getElementById('rateDisplay');
+        
+        rateSlider.addEventListener('input', () => {
+            rateDisplay.textContent = rateSlider.value + ' WPM';
+        });
+
+        // Format Selection
+        const formatOptions = document.querySelectorAll('.format-option');
+        const selectedFormatInput = document.getElementById('selectedFormat');
+        const qualitySettings = document.getElementById('qualitySettings');
+        
+        formatOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                formatOptions.forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedFormatInput.value = option.dataset.format;
+                
+                // Show/hide quality settings for MP3
+                qualitySettings.style.display = option.dataset.format === 'mp3' ? 'block' : 'none';
+            });
+        });
+
+        // Quality Selection
+        const qualityBtns = document.querySelectorAll('.quality-btn');
+        const selectedQualityInput = document.getElementById('selectedQuality');
+        
+        qualityBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                qualityBtns.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedQualityInput.value = btn.dataset.quality;
+            });
+        });
+
+        // Form Submission
+        const uploadForm = document.getElementById('uploadForm');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressSection = document.getElementById('progressSection');
+        const resultSection = document.getElementById('resultSection');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const statusText = document.getElementById('statusText');
+        
+        let currentJobId = null;
+
+        uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             if (!fileInput.files || !fileInput.files[0]) {
@@ -396,14 +1612,14 @@
                 return;
             }
             
-            const formData = new FormData(this);
+            const formData = new FormData(uploadForm);
             
-            // Disable form and show progress
+            // Update UI
             convertBtn.disabled = true;
-            fileInput.disabled = true;
-            convertBtn.innerHTML = '<i class="loading-spinner"></i> Converting...';
+            convertBtn.innerHTML = '<span class="spinner"></span> Processing...';
             progressSection.style.display = 'block';
-            downloadSection.style.display = 'none';
+            resultSection.style.display = 'none';
+            resetProgressSteps();
             
             try {
                 const response = await fetch('/upload', {
@@ -411,22 +1627,7 @@
                     body: formData
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
-                
-                const text = await response.text();
-                if (!text) {
-                    throw new Error('Empty response from server');
-                }
-                
-                let result;
-                try {
-                    result = JSON.parse(text);
-                } catch (jsonError) {
-                    console.error('Invalid JSON response:', text);
-                    throw new Error('Invalid response from server');
-                }
+                const result = await response.json();
                 
                 if (result.error) {
                     throw new Error(result.error);
@@ -435,73 +1636,108 @@
                 currentJobId = result.job_id;
                 checkProgress();
             } catch (error) {
-                console.error('Upload error:', error);
                 alert('Error: ' + error.message);
                 resetForm();
             }
         });
-        
-        // Check conversion progress
+
+        function resetProgressSteps() {
+            for (let i = 1; i <= 5; i++) {
+                const step = document.getElementById('step' + i);
+                step.classList.remove('active', 'completed');
+            }
+        }
+
+        function updateProgressSteps(progress) {
+            const steps = [
+                { threshold: 10, step: 1 },
+                { threshold: 30, step: 2 },
+                { threshold: 60, step: 3 },
+                { threshold: 85, step: 4 },
+                { threshold: 100, step: 5 }
+            ];
+            
+            steps.forEach((s, index) => {
+                const stepEl = document.getElementById('step' + s.step);
+                if (progress >= s.threshold) {
+                    stepEl.classList.remove('active');
+                    stepEl.classList.add('completed');
+                } else if (progress >= (steps[index - 1]?.threshold || 0)) {
+                    stepEl.classList.add('active');
+                }
+            });
+        }
+
         function checkProgress() {
             if (!currentJobId) return;
             
             fetch(`/status/${currentJobId}`)
-                .then(async response => {
-                    if (!response.ok) {
-                        throw new Error(`Status check failed: ${response.status}`);
-                    }
-                    
-                    const text = await response.text();
-                    if (!text) {
-                        throw new Error('Empty status response');
-                    }
-                    
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (jsonError) {
-                        console.error('Invalid JSON in status response:', text);
-                        throw new Error('Invalid status response');
-                    }
-                    
+                .then(response => response.json())
+                .then(data => {
                     const progress = data.progress || 0;
                     progressBar.style.width = progress + '%';
-                    progressBar.setAttribute('aria-valuenow', progress);
-                    progressBar.textContent = progress + '%';
-                    
-                    statusMessage.innerHTML = `<i class="loading-spinner"></i> ${data.current_step || 'Processing...'}`;
-                    statusMessage.className = 'status-message status-processing';
+                    progressPercent.textContent = progress + '%';
+                    statusText.textContent = data.current_step || 'Processing...';
+                    updateProgressSteps(progress);
                     
                     if (data.status === 'completed') {
-                        statusMessage.innerHTML = `<i class="fas fa-check-circle"></i> ${data.current_step}`;
-                        statusMessage.className = 'status-message status-completed';
-                        
-                        downloadBtn.href = `/download/${currentJobId}`;
-                        downloadSection.style.display = 'block';
-                        
-                        setTimeout(resetForm, 2000);
+                        showResult(data);
                     } else if (data.status === 'failed') {
-                        statusMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> Error: ${data.error || 'Unknown error'}`;
-                        statusMessage.className = 'status-message status-error';
+                        alert('Conversion failed: ' + (data.error || 'Unknown error'));
                         resetForm();
                     } else {
-                        // Continue checking
-                        setTimeout(checkProgress, 1000);
+                        setTimeout(checkProgress, 800);
                     }
                 })
                 .catch(error => {
-                    console.error('Progress check failed:', error);
-                    statusMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> Connection error: ${error.message}`;
-                    statusMessage.className = 'status-message status-error';
-                    setTimeout(checkProgress, 3000); // Retry after longer delay
+                    console.error('Progress check error:', error);
+                    setTimeout(checkProgress, 2000);
                 });
         }
-        
-        // Reset form
+
+        function showResult(data) {
+            progressSection.style.display = 'none';
+            resultSection.style.display = 'block';
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            const audioPlayer = document.getElementById('audioPlayer');
+            const audioFormat = document.getElementById('audioFormat');
+            
+            downloadBtn.href = `/download/${currentJobId}`;
+            audioPlayer.src = `/download/${currentJobId}`;
+            audioFormat.textContent = selectedFormatInput.value.toUpperCase();
+            
+            // Get audio duration when metadata loads
+            audioPlayer.addEventListener('loadedmetadata', () => {
+                const duration = audioPlayer.duration;
+                const minutes = Math.floor(duration / 60);
+                const seconds = Math.floor(duration % 60);
+                document.getElementById('audioDuration').textContent = 
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            });
+            
+            resetForm();
+        }
+
         function resetForm() {
             convertBtn.disabled = false;
-            fileInput.disabled = false;
             convertBtn.innerHTML = '<i class="fas fa-magic"></i> Convert to Audio';
+        }
+
+        // New Conversion button
+        document.getElementById('newConversion').addEventListener('click', () => {
+            resultSection.style.display = 'none';
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            uploadZone.classList.remove('has-file');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Load voices for Web Speech API preview
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = () => {
+                speechSynthesis.getVoices();
+            };
         }
     </script>
 </body>
