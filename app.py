@@ -43,6 +43,22 @@ try:
 except ImportError:
     JOB_QUEUE_AVAILABLE = False
 
+try:
+    from translator import translator
+    TRANSLATOR_AVAILABLE = True
+    print(f"✅ Translator loaded. Supported languages: {len(translator.get_popular_languages())}")
+except ImportError as e:
+    TRANSLATOR_AVAILABLE = False
+    print(f"⚠️ Translator not available: {e}")
+
+try:
+    from smart_features import smart_features
+    SMART_FEATURES_AVAILABLE = True
+    print(f"✅ Smart features loaded (summarize, chapters, key points)")
+except ImportError as e:
+    SMART_FEATURES_AVAILABLE = False
+    print(f"⚠️ Smart features not available: {e}")
+
 def create_app():
     app = Flask(__name__)
     
@@ -141,11 +157,71 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
         if not text or not text.strip():
             raise Exception("No text found in document")
         
+        conversion_jobs[job_id]['progress'] = 20
+        
+        # Step 1.5: Smart Features (if enabled)
+        if SMART_FEATURES_AVAILABLE:
+            mode = options.get('mode', 'full')  # full, summary, keypoints, chapters, qa
+            
+            if mode == 'summary':
+                conversion_jobs[job_id]['current_step'] = 'Creating summary...'
+                summary_ratio = float(options.get('summary_ratio', 0.3))
+                text = smart_features.summarize(text, ratio=summary_ratio, max_sentences=10)
+                conversion_jobs[job_id]['processing_mode'] = 'Summary Mode'
+            
+            elif mode == 'keypoints':
+                conversion_jobs[job_id]['current_step'] = 'Extracting key points...'
+                max_points = int(options.get('max_keypoints', 10))
+                key_points = smart_features.extract_key_points(text, max_points=max_points)
+                text = '\n\n'.join([f"Key point {i+1}: {kp.text}" for i, kp in enumerate(key_points)])
+                conversion_jobs[job_id]['processing_mode'] = f'Key Points Mode ({len(key_points)} points)'
+            
+            elif mode == 'chapters':
+                conversion_jobs[job_id]['current_step'] = 'Detecting chapters...'
+                chapters = smart_features.detect_chapters(text)
+                # Add chapter markers for better audio navigation
+                chapter_texts = []
+                for i, chapter in enumerate(chapters):
+                    chapter_texts.append(f"Chapter {i+1}: {chapter.title}. {chapter.content}")
+                text = '\n\n'.join(chapter_texts)
+                conversion_jobs[job_id]['processing_mode'] = f'Chapters Mode ({len(chapters)} chapters)'
+            
+            elif mode == 'qa':
+                conversion_jobs[job_id]['current_step'] = 'Extracting Q&A pairs...'
+                qa_pairs = smart_features.extract_qa_pairs(text)
+                # Format Q&A for audio
+                qa_texts = []
+                for i, qa in enumerate(qa_pairs):
+                    qa_texts.append(f"Question {i+1}: {qa.question}")
+                    qa_texts.append(f"Answer: {qa.answer}")
+                    qa_texts.append("")  # Add pause
+                text = '\n\n'.join(qa_texts)
+                conversion_jobs[job_id]['processing_mode'] = f'Q&A Mode ({len(qa_pairs)} pairs)'
+        
         conversion_jobs[job_id]['progress'] = 25
         
-        # Step 2: Process text with AI enhancements (Optimized)
-        conversion_jobs[job_id]['current_step'] = 'Processing text...'
+        # Step 2: Translation (if enabled)
+        if TRANSLATOR_AVAILABLE:
+            target_lang = options.get('translate_to', '')
+            if target_lang and target_lang != 'none' and target_lang != 'en':
+                conversion_jobs[job_id]['current_step'] = f'Translating to {target_lang}...'
+                conversion_jobs[job_id]['progress'] = 30
+                
+                try:
+                    translation_result = translator.translate(text, target_lang=target_lang)
+                    text = translation_result.text
+                    conversion_jobs[job_id]['translation'] = {
+                        'source': translation_result.source_lang,
+                        'target': translation_result.target_lang,
+                        'confidence': translation_result.confidence
+                    }
+                except Exception as e:
+                    app.logger.warning(f"Translation failed: {e}")
+        
         conversion_jobs[job_id]['progress'] = 35
+        
+        # Step 3: Process text with AI enhancements (Optimized)
+        conversion_jobs[job_id]['current_step'] = 'Processing text...'
         
         if TEXT_PROCESSOR_AVAILABLE:
             processing_options = {
@@ -554,8 +630,198 @@ def get_stats():
             'text_processing': TEXT_PROCESSOR_AVAILABLE,
             'audio_processing': AUDIO_PROCESSOR_AVAILABLE,
             'document_converter': DOCUMENT_CONVERTER_AVAILABLE,
+            'translator': TRANSLATOR_AVAILABLE,
+            'smart_features': SMART_FEATURES_AVAILABLE,
         }
     })
+
+
+@app.route('/api/languages')
+def get_languages():
+    """Get available translation languages"""
+    if not TRANSLATOR_AVAILABLE:
+        return jsonify({'error': 'Translation not available'}), 503
+    
+    return jsonify({
+        'popular': translator.get_popular_languages(),
+        'all': translator.get_available_languages()
+    })
+
+
+@app.route('/api/detect-language', methods=['POST'])
+def detect_language():
+    """Detect language of text"""
+    if not TRANSLATOR_AVAILABLE:
+        return jsonify({'error': 'Translation not available'}), 503
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        
+        if not text:
+            return jsonify({'error': 'No text provided'}), 400
+        
+        lang_code, confidence = translator.detect_language(text)
+        lang_name = translator.get_available_languages().get(lang_code, 'Unknown')
+        
+        return jsonify({
+            'language': lang_code,
+            'language_name': lang_name,
+            'confidence': confidence
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/translate-preview', methods=['POST'])
+def translate_preview():
+    """Preview translation of first few sentences"""
+    if not TRANSLATOR_AVAILABLE:
+        return jsonify({'error': 'Translation not available'}), 503
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '')[:500]  # Preview first 500 chars
+        target_lang = data.get('target_lang', 'en')
+        
+        if not text:
+            return jsonify({'error': 'No text provided'}), 400
+        
+        result = translator.translate(text, target_lang=target_lang)
+        
+        return jsonify({
+            'original': text,
+            'translated': result.text,
+            'source_language': result.source_lang,
+            'target_language': result.target_lang,
+            'confidence': result.confidence
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/summarize', methods=['POST'])
+def api_summarize():
+    """Generate summary of text"""
+    if not SMART_FEATURES_AVAILABLE:
+        return jsonify({'error': 'Smart features not available'}), 503
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        ratio = float(data.get('ratio', 0.3))
+        max_sentences = int(data.get('max_sentences', 5))
+        
+        if not text:
+            return jsonify({'error': 'No text provided'}), 400
+        
+        summary = smart_features.summarize(text, ratio=ratio, max_sentences=max_sentences)
+        
+        return jsonify({
+            'summary': summary,
+            'original_length': len(text),
+            'summary_length': len(summary),
+            'compression_ratio': len(summary) / len(text)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/key-points', methods=['POST'])
+def api_key_points():
+    """Extract key points from text"""
+    if not SMART_FEATURES_AVAILABLE:
+        return jsonify({'error': 'Smart features not available'}), 503
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        max_points = int(data.get('max_points', 10))
+        
+        if not text:
+            return jsonify({'error': 'No text provided'}), 400
+        
+        key_points = smart_features.extract_key_points(text, max_points=max_points)
+        
+        return jsonify({
+            'key_points': [
+                {
+                    'text': kp.text,
+                    'importance': kp.importance,
+                    'category': kp.category
+                } for kp in key_points
+            ],
+            'count': len(key_points)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/chapters', methods=['POST'])
+def api_chapters():
+    """Detect chapters in text"""
+    if not SMART_FEATURES_AVAILABLE:
+        return jsonify({'error': 'Smart features not available'}), 503
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        
+        if not text:
+            return jsonify({'error': 'No text provided'}), 400
+        
+        chapters = smart_features.detect_chapters(text)
+        
+        return jsonify({
+            'chapters': [
+                {
+                    'title': ch.title,
+                    'length': len(ch.content),
+                    'level': ch.level
+                } for ch in chapters
+            ],
+            'count': len(chapters)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/qa-extract', methods=['POST'])
+def api_qa_extract():
+    """Extract Q&A pairs from text"""
+    if not SMART_FEATURES_AVAILABLE:
+        return jsonify({'error': 'Smart features not available'}), 503
+    
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        
+        if not text:
+            return jsonify({'error': 'No text provided'}), 400
+        
+        qa_pairs = smart_features.extract_qa_pairs(text)
+        
+        return jsonify({
+            'qa_pairs': [
+                {
+                    'question': qa.question,
+                    'answer': qa.answer,
+                    'confidence': qa.confidence
+                } for qa in qa_pairs
+            ],
+            'count': len(qa_pairs)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+if __name__ == '__main__':
+                } for ch in chapters
+            ],
+            'count': len(chapters)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
