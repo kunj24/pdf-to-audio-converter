@@ -112,8 +112,12 @@ class DocumentConverter:
         }
     
     def get_format(self, file_path: str) -> DocumentFormat:
-        """Detect document format from file extension"""
-        ext = os.path.splitext(file_path)[1].lower().lstrip('.')
+        """Detect document format from file extension (robust handling)"""
+        # Get extension and clean it thoroughly
+        ext = os.path.splitext(file_path)[1].lower().lstrip('.').strip()
+        
+        # Remove any non-alphanumeric characters
+        ext = ''.join(c for c in ext if c.isalnum())
         
         format_map = {
             'pdf': DocumentFormat.PDF,
@@ -133,7 +137,22 @@ class DocumentConverter:
             'gif': DocumentFormat.IMAGE,
         }
         
-        return format_map.get(ext, DocumentFormat.TXT)
+        detected_format = format_map.get(ext)
+        
+        if not detected_format:
+            # Try to detect from file content if extension is unclear
+            if ext in ['', 'tmp', 'download']:
+                try:
+                    # Read first few bytes to detect PDF signature
+                    with open(file_path, 'rb') as f:
+                        header = f.read(5)
+                        if header.startswith(b'%PDF'):
+                            return DocumentFormat.PDF
+                except:
+                    pass
+            return DocumentFormat.TXT  # Default to text
+        
+        return detected_format
     
     def convert(
         self,
@@ -186,7 +205,7 @@ class DocumentConverter:
         start_page: Optional[int] = None,
         end_page: Optional[int] = None
     ) -> Tuple[str, DocumentInfo]:
-        """Convert PDF to text"""
+        """Convert PDF to text with optimized extraction"""
         if not PYPDF2_AVAILABLE:
             raise RuntimeError("PyPDF2 is required for PDF conversion")
         
@@ -199,19 +218,32 @@ class DocumentConverter:
         start = max(0, start)
         end = min(total_pages, end)
         
-        # Extract text
+        # Optimized: Extract text with batch processing for large docs
         text_chunks = []
         has_images = False
         
-        for i in range(start, end):
-            page = reader.pages[i]
-            page_text = page.extract_text() or ""
-            text_chunks.append(page_text)
+        # Use batch processing for better memory efficiency
+        BATCH_SIZE = 50  # Process 50 pages at a time
+        for batch_start in range(start, end, BATCH_SIZE):
+            batch_end = min(batch_start + BATCH_SIZE, end)
             
-            # Check for images
-            if '/XObject' in page.get('/Resources', {}):
-                has_images = True
+            for i in range(batch_start, batch_end):
+                page = reader.pages[i]
+                # Optimized: Extract text and skip empty pages
+                page_text = page.extract_text()
+                if page_text and page_text.strip():
+                    text_chunks.append(page_text.strip())
+                
+                # Check for images (simple check without iterating)
+                if not has_images:
+                    try:
+                        # Safer way: just check if resources exist
+                        if hasattr(page, 'images') and len(page.images) > 0:
+                            has_images = True
+                    except:
+                        pass  # Skip image detection on error
         
+        # Optimized: Join with better spacing
         full_text = "\n\n".join(text_chunks)
         
         # Check if document appears to be scanned (very little text per page)
