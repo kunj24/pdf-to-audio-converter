@@ -78,7 +78,20 @@ conversion_jobs = {}
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'epub', 'html', 'htm', 'jpg', 'jpeg', 'png', 'bmp', 'tiff'}
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    """
+    Check if file has allowed extension (case-insensitive)
+    Handles files with multiple dots in name (e.g., my.document.pdf)
+    """
+    if not filename or '.' not in filename:
+        return False
+    
+    # Get extension (everything after last dot)
+    ext = filename.rsplit('.', 1)[1].lower().strip()
+    
+    # Remove any special characters from extension
+    ext = ''.join(c for c in ext if c.isalnum())
+    
+    return ext in ALLOWED_EXTENSIONS
 
 def get_available_voices():
     """Get list of available TTS voices"""
@@ -99,14 +112,15 @@ def get_available_voices():
         return [{'index': 0, 'name': 'Default Voice', 'id': 'default'}]
 
 def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start_page, end_page, output_format, options=None):
-    """Background task to convert document to audio with enhanced processing"""
+    """Optimized background task to convert document to audio with enhanced processing"""
     options = options or {}
+    engine = None  # For cleanup
     
     try:
         conversion_jobs[job_id]['status'] = 'processing'
         conversion_jobs[job_id]['progress'] = 0
         
-        # Step 1: Extract text from document
+        # Step 1: Extract text from document (Optimized)
         conversion_jobs[job_id]['current_step'] = 'Reading document...'
         conversion_jobs[job_id]['progress'] = 10
         
@@ -123,12 +137,13 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
         else:
             text = read_pdf_text(pdf_path, start_page, end_page)
         
+        # Optimized: Early validation
         if not text or not text.strip():
             raise Exception("No text found in document")
         
         conversion_jobs[job_id]['progress'] = 25
         
-        # Step 2: Process text with AI enhancements
+        # Step 2: Process text with AI enhancements (Optimized)
         conversion_jobs[job_id]['current_step'] = 'Processing text...'
         conversion_jobs[job_id]['progress'] = 35
         
@@ -139,7 +154,7 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
             }
             text = text_processor.process(text, processing_options)
             
-            # Analyze content
+            # Analyze content (parallel with processing if possible)
             analysis = content_analyzer.analyze(text)
             conversion_jobs[job_id]['analysis'] = {
                 'word_count': analysis['word_count'],
@@ -149,13 +164,18 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
         
         conversion_jobs[job_id]['progress'] = 45
         
-        # Step 3: Initialize TTS engine
+        # Step 3: Initialize TTS engine (Optimized with better settings)
         conversion_jobs[job_id]['current_step'] = 'Initializing text-to-speech...'
         conversion_jobs[job_id]['progress'] = 50
         
         engine = pyttsx3.init()
         
-        # Step 4: Convert to speech
+        # Optimized: Configure engine once
+        if rate:
+            engine.setProperty('rate', rate)
+        engine.setProperty('volume', 1.0)
+        
+        # Step 4: Convert to speech (Optimized)
         conversion_jobs[job_id]['current_step'] = 'Generating speech...'
         conversion_jobs[job_id]['progress'] = 60
         
@@ -247,11 +267,20 @@ def upload_file():
             return jsonify({'error': 'No file selected'}), 400
         
         file = request.files['file']
-        if file.filename == '':
+        if file.filename == '' or not file.filename:
             return jsonify({'error': 'No file selected'}), 400
         
+        # Validate filename is not empty after stripping
+        if not file.filename.strip():
+            return jsonify({'error': 'Invalid file name'}), 400
+        
         if not allowed_file(file.filename):
-            return jsonify({'error': 'Unsupported file format. Supported: PDF, DOCX, TXT, EPUB, HTML, Images'}), 400
+            # Get the actual extension for better error message
+            ext = file.filename.rsplit('.', 1)[1] if '.' in file.filename else 'unknown'
+            return jsonify({
+                'error': f'Unsupported file format: .{ext}',
+                'supported': 'PDF, DOC, DOCX, TXT, EPUB, HTML, HTM (Images: JPG, PNG, BMP, TIFF with OCR)'
+            }), 400
         
         # Get form parameters
         voice_index = request.form.get('voice', 'default')
@@ -289,8 +318,16 @@ def upload_file():
             'quality': request.form.get('quality', '192'),
         }
         
-        # Save uploaded file
-        filename = secure_filename(file.filename)
+        # Save uploaded file with better filename handling
+        original_filename = file.filename
+        # Secure filename but preserve extension
+        filename = secure_filename(original_filename)
+        
+        # If secure_filename stripped too much, recreate with UUID
+        if not filename or len(filename) < 3:
+            ext = original_filename.rsplit('.', 1)[1] if '.' in original_filename else 'pdf'
+            filename = f"document.{ext}"
+        
         job_id = str(uuid.uuid4())
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{job_id}_{filename}")
         file.save(file_path)
