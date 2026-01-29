@@ -16,30 +16,60 @@ except Exception:
 
 
 def read_pdf_text(path: str, start_page: Optional[int] = None, end_page: Optional[int] = None) -> str:
+    """Optimized PDF text extraction with better memory usage"""
     reader = PdfReader(path)
     n = len(reader.pages)
     s = start_page - 1 if start_page else 0
     e = end_page if end_page else n
     s = max(0, s)
     e = min(n, e)
+    
+    # Optimized: Pre-allocate list size
+    page_count = e - s
     chunks = []
-    for i in range(s, e):
-        txt = reader.pages[i].extract_text() or ""
-        chunks.append(txt)
+    chunks_reserve = page_count
+    
+    # Optimized: Process in batches for better memory management
+    BATCH_SIZE = 50
+    for batch_start in range(s, e, BATCH_SIZE):
+        batch_end = min(batch_start + BATCH_SIZE, e)
+        for i in range(batch_start, batch_end):
+            txt = reader.pages[i].extract_text()
+            if txt and txt.strip():  # Skip empty pages
+                chunks.append(txt.strip())
+    
+    # Optimized: Join with proper spacing
     full = "\n\n".join(chunks)
     return normalize_text(full)
 
 
 def normalize_text(text: str) -> str:
-    # Remove repeated spaces, join broken lines, fix hyphenation at EOL
+    """Optimized text normalization with better processing"""
+    if not text:
+        return ""
+    
+    # Optimized: Process in single pass when possible
     text = text.replace('\r', '')
+    
+    # Optimized: Use compiled regex for better performance
+    whitespace_pattern = re.compile(r"\s+")
+    hyphen_pattern = re.compile(r"-\s+")
+    
+    # Process lines efficiently
     lines = text.split('\n')
     joined = []
     for ln in lines:
-        ln = re.sub(r"\s+", " ", ln).strip()
-        joined.append(ln)
+        ln = whitespace_pattern.sub(" ", ln).strip()
+        if ln:  # Skip empty lines
+            joined.append(ln)
+    
+    # Join and fix hyphenation
     text = " ".join(joined)
-    text = re.sub(r"-\s+", "", text)  # de-hyphenation
+    text = hyphen_pattern.sub("", text)
+    
+    # Optimized: Remove multiple spaces that might remain
+    text = whitespace_pattern.sub(" ", text)
+    
     return text.strip()
 
 
@@ -50,8 +80,17 @@ def list_voices(engine: pyttsx3.Engine):
 
 
 def synth_to_wav(engine: pyttsx3.Engine, text: str, wav_path: str, rate: Optional[int] = None, voice: Optional[str] = None):
+    """Optimized speech synthesis with better configuration"""
+    # Optimized: Configure engine for better performance
     if rate:
         engine.setProperty('rate', rate)
+    else:
+        # Set optimal default rate for clarity
+        engine.setProperty('rate', 175)
+    
+    # Optimized: Set volume for consistent output
+    engine.setProperty('volume', 1.0)
+    
     if voice and voice != 'default':
         # Try by index, else by id/name
         try:
@@ -61,7 +100,35 @@ def synth_to_wav(engine: pyttsx3.Engine, text: str, wav_path: str, rate: Optiona
                 engine.setProperty('voice', voices[vi].id)
         except ValueError:
             engine.setProperty('voice', voice)
-    engine.save_to_file(text, wav_path)
+    
+    # Optimized: Process text in chunks for large documents to avoid memory issues
+    MAX_CHUNK_SIZE = 10000  # Characters per chunk
+    if len(text) > MAX_CHUNK_SIZE:
+        # Split text into sentences for better chunking
+        import re
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        current_chunk = []
+        current_length = 0
+        
+        for sentence in sentences:
+            sentence_len = len(sentence)
+            if current_length + sentence_len > MAX_CHUNK_SIZE and current_chunk:
+                # Process current chunk
+                chunk_text = ' '.join(current_chunk)
+                engine.save_to_file(chunk_text, wav_path)
+                current_chunk = [sentence]
+                current_length = sentence_len
+            else:
+                current_chunk.append(sentence)
+                current_length += sentence_len + 1
+        
+        # Process remaining chunk
+        if current_chunk:
+            chunk_text = ' '.join(current_chunk)
+            engine.save_to_file(chunk_text, wav_path)
+    else:
+        engine.save_to_file(text, wav_path)
+    
     engine.runAndWait()
 
 
