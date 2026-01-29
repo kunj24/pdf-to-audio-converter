@@ -78,7 +78,7 @@ class TextProcessor:
     
     def process(self, text: str, options: Optional[Dict] = None) -> str:
         """
-        Main processing pipeline for text
+        Main processing pipeline for text with optimized caching
         
         Args:
             text: Raw text from PDF
@@ -89,37 +89,71 @@ class TextProcessor:
         """
         options = options or {}
         
-        # Apply processing steps
-        text = self.remove_headers_footers(text)
-        text = self.clean_whitespace(text)
-        text = self.fix_hyphenation(text)
-        text = self.expand_abbreviations(text)
-        text = self.handle_numbers(text)
-        text = self.handle_special_characters(text)
-        text = self.improve_punctuation(text)
-        text = self.handle_urls_emails(text)
-        text = self.handle_lists(text)
+        # Optimized: Quick exit for empty text
+        if not text or not text.strip():
+            return ""
         
+        # Optimized: Pre-compile patterns if not cached
+        if not hasattr(self, '_patterns_compiled'):
+            self._compile_patterns()
+        
+        # Apply processing steps in optimized order
+        text = self.clean_whitespace(text)  # Do first for better processing
+        text = self.fix_hyphenation(text)
+        text = self.remove_headers_footers(text)
+        
+        # Optimized: Batch similar operations
+        text = self.expand_abbreviations(text)
         if options.get('expand_tech_terms', True):
             text = self.expand_tech_terms(text)
+        
+        text = self.handle_numbers(text)
+        text = self.handle_special_characters(text)
+        text = self.handle_urls_emails(text)
+        text = self.handle_lists(text)
+        text = self.improve_punctuation(text)
         
         if options.get('add_pauses', True):
             text = self.add_natural_pauses(text)
         
         return text.strip()
     
+    def _compile_patterns(self):
+        """Pre-compile regex patterns for better performance"""
+        self._patterns_compiled = True
+        self._page_num_pattern = re.compile(r'^-?\s*\d+\s*-?$')
+        self._page_label_pattern = re.compile(r'^Page\s+\d+(\s+of\s+\d+)?$', re.IGNORECASE)
+        self._whitespace_pattern = re.compile(r' +')
+        self._multi_newline_pattern = re.compile(r'\n{3,}')
+        self._hyphen_pattern = re.compile(r'(\w+)-\s*\n\s*(\w+)')
+        self._currency_patterns = [
+            (re.compile(r'\$(\d+(?:,\d{3})*(?:\.\d{2})?)'), r'\1 dollars'),
+            (re.compile(r'€(\d+(?:,\d{3})*(?:\.\d{2})?)'), r'\1 euros'),
+            (re.compile(r'£(\d+(?:,\d{3})*(?:\.\d{2})?)'), r'\1 pounds'),
+        ]
+        self._percent_pattern = re.compile(r'(\d+(?:\.\d+)?)\s*%')
+    
     def remove_headers_footers(self, text: str) -> str:
-        """Remove common header/footer patterns"""
+        """Optimized header/footer removal"""
+        if not text:
+            return ""
+        
         lines = text.split('\n')
         cleaned_lines = []
+        
+        # Pre-compile patterns if not using cached ones
+        page_num = self._page_num_pattern if hasattr(self, '_page_num_pattern') else re.compile(r'^-?\s*\d+\s*-?$')
+        page_label = self._page_label_pattern if hasattr(self, '_page_label_pattern') else re.compile(r'^Page\s+\d+(\s+of\s+\d+)?$', re.IGNORECASE)
         
         for i, line in enumerate(lines):
             line_stripped = line.strip()
             
-            # Skip page numbers
-            if re.match(r'^-?\s*\d+\s*-?$', line_stripped):
+            # Skip empty lines
+            if not line_stripped:
                 continue
-            if re.match(r'^Page\s+\d+(\s+of\s+\d+)?$', line_stripped, re.IGNORECASE):
+            
+            # Skip page numbers
+            if page_num.match(line_stripped) or page_label.match(line_stripped):
                 continue
             
             # Skip common header/footer patterns
@@ -129,7 +163,7 @@ class TextProcessor:
                 continue
             
             # Skip very short repeated lines (likely headers)
-            if len(line_stripped) < 5 and i > 0 and i < len(lines) - 1:
+            if len(line_stripped) < 5 and 0 < i < len(lines) - 1:
                 continue
             
             cleaned_lines.append(line)
@@ -137,26 +171,37 @@ class TextProcessor:
         return '\n'.join(cleaned_lines)
     
     def clean_whitespace(self, text: str) -> str:
-        """Clean up whitespace issues"""
+        """Optimized whitespace cleanup"""
+        if not text:
+            return ""
+        
         # Remove carriage returns
         text = text.replace('\r', '')
         
-        # Replace multiple spaces with single space
-        text = re.sub(r' +', ' ', text)
+        # Use pre-compiled patterns if available
+        if hasattr(self, '_whitespace_pattern'):
+            text = self._whitespace_pattern.sub(' ', text)
+            text = self._multi_newline_pattern.sub('\n\n', text)
+        else:
+            text = re.sub(r' +', ' ', text)
+            text = re.sub(r'\n{3,}', '\n\n', text)
         
-        # Replace multiple newlines with double newline (paragraph break)
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        
-        # Remove spaces at the beginning/end of lines
-        lines = [line.strip() for line in text.split('\n')]
+        # Optimized: Process lines in batch
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
         text = '\n'.join(lines)
         
         return text
     
     def fix_hyphenation(self, text: str) -> str:
-        """Fix words broken across lines with hyphens"""
-        # Fix end-of-line hyphenation
-        text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
+        """Optimized hyphenation fixing"""
+        if not text:
+            return ""
+        
+        # Use pre-compiled pattern if available
+        if hasattr(self, '_hyphen_pattern'):
+            text = self._hyphen_pattern.sub(r'\1\2', text)
+        else:
+            text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
         return text
     
     def expand_abbreviations(self, text: str) -> str:
@@ -175,21 +220,28 @@ class TextProcessor:
         return text
     
     def handle_numbers(self, text: str) -> str:
-        """Convert numbers to spoken form where appropriate"""
+        """Optimized number conversion to spoken form"""
+        if not text:
+            return ""
         
-        # Handle currency
-        text = re.sub(r'\$(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 dollars', text)
-        text = re.sub(r'€(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 euros', text)
-        text = re.sub(r'£(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 pounds', text)
+        # Use pre-compiled patterns if available
+        if hasattr(self, '_currency_patterns'):
+            for pattern, replacement in self._currency_patterns:
+                text = pattern.sub(replacement, text)
+            text = self._percent_pattern.sub(r'\1 percent', text)
+        else:
+            # Handle currency
+            text = re.sub(r'\$(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 dollars', text)
+            text = re.sub(r'€(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 euros', text)
+            text = re.sub(r'£(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 pounds', text)
+            text = re.sub(r'(\d+(?:\.\d+)?)\s*%', r'\1 percent', text)
         
-        # Handle percentages
-        text = re.sub(r'(\d+(?:\.\d+)?)\s*%', r'\1 percent', text)
-        
-        # Handle ordinals
-        text = re.sub(r'\b1st\b', 'first', text)
-        text = re.sub(r'\b2nd\b', 'second', text)
-        text = re.sub(r'\b3rd\b', 'third', text)
-        text = re.sub(r'\b(\d+)th\b', r'\1th', text)
+        # Handle ordinals (optimized with fewer regex calls)
+        ordinal_map = {'1st': 'first', '2nd': 'second', '3rd': 'third'}
+        for ordinal, word in ordinal_map.items():
+            text = text.replace(f' {ordinal} ', f' {word} ')
+            text = text.replace(f' {ordinal},', f' {word},')
+            text = text.replace(f' {ordinal}.', f' {word}.')
         
         # Handle times
         text = re.sub(r'(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)', r'\1 \2 \3', text)
