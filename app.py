@@ -162,19 +162,25 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
         # Step 1.5: Smart Features (if enabled)
         if SMART_FEATURES_AVAILABLE:
             mode = options.get('mode', 'full')  # full, summary, keypoints, chapters, qa
+            app.logger.info(f"Job {job_id}: Processing mode = {mode}, text length before = {len(text)}")
             
             if mode == 'summary':
                 conversion_jobs[job_id]['current_step'] = 'Creating summary...'
                 summary_ratio = float(options.get('summary_ratio', 0.3))
-                text = smart_features.summarize(text, ratio=summary_ratio, max_sentences=10)
+                # Use stricter max_sentences for 30% summary
+                max_sents = max(3, int(len(text.split('.')) * summary_ratio))
+                text = smart_features.summarize(text, ratio=summary_ratio, max_sentences=max_sents)
                 conversion_jobs[job_id]['processing_mode'] = 'Summary Mode'
+                app.logger.info(f"Job {job_id}: Summary created, text length after = {len(text)}")
             
             elif mode == 'keypoints':
                 conversion_jobs[job_id]['current_step'] = 'Extracting key points...'
                 max_points = int(options.get('max_keypoints', 10))
                 key_points = smart_features.extract_key_points(text, max_points=max_points)
-                text = '\n\n'.join([f"Key point {i+1}: {kp.text}" for i, kp in enumerate(key_points)])
+                # Just use the key point text directly, more concise
+                text = '. '.join([kp.text for kp in key_points])
                 conversion_jobs[job_id]['processing_mode'] = f'Key Points Mode ({len(key_points)} points)'
+                app.logger.info(f"Job {job_id}: Key points extracted = {len(key_points)}, text length after = {len(text)}")
             
             elif mode == 'chapters':
                 conversion_jobs[job_id]['current_step'] = 'Detecting chapters...'
@@ -185,6 +191,7 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
                     chapter_texts.append(f"Chapter {i+1}: {chapter.title}. {chapter.content}")
                 text = '\n\n'.join(chapter_texts)
                 conversion_jobs[job_id]['processing_mode'] = f'Chapters Mode ({len(chapters)} chapters)'
+                app.logger.info(f"Job {job_id}: Chapters detected = {len(chapters)}, text length after = {len(text)}")
             
             elif mode == 'qa':
                 conversion_jobs[job_id]['current_step'] = 'Extracting Q&A pairs...'
@@ -392,6 +399,8 @@ def upload_file():
             'normalize_audio': request.form.get('normalize_audio', 'true').lower() == 'true',
             'trim_silence': request.form.get('trim_silence', 'false').lower() == 'true',
             'quality': request.form.get('quality', '192'),
+            'mode': request.form.get('mode', 'full'),  # full, summary, keypoints, chapters, qa
+            'translate_to': request.form.get('target_lang', ''),  # target language code
         }
         
         # Save uploaded file with better filename handling
