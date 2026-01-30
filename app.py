@@ -175,12 +175,13 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
             
             elif mode == 'keypoints':
                 conversion_jobs[job_id]['current_step'] = 'Extracting key points...'
-                max_points = int(options.get('max_keypoints', 10))
+                # Limit to 5 key points for very short audio
+                max_points = min(5, int(options.get('max_keypoints', 5)))
                 key_points = smart_features.extract_key_points(text, max_points=max_points)
-                # Very concise - truncate long sentences to 80 chars max
+                # Very concise - max 50 chars per point for short audio
                 point_texts = []
-                for i, kp in enumerate(key_points):
-                    point_text = kp.text[:80] + '...' if len(kp.text) > 80 else kp.text
+                for kp in key_points:
+                    point_text = kp.text[:50] + '...' if len(kp.text) > 50 else kp.text
                     point_texts.append(point_text)
                 text = '. '.join(point_texts) + '.'
                 conversion_jobs[job_id]['processing_mode'] = f'Key Points Mode ({len(key_points)} points)'
