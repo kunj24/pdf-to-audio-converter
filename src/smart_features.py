@@ -169,7 +169,7 @@ class SmartFeatures:
         self,
         text: str,
         max_points: int = 10,
-        min_importance: float = 0.4
+        min_importance: float = 0.3
     ) -> List[KeyPoint]:
         """
         Extract key points from text
@@ -186,22 +186,34 @@ class SmartFeatures:
         scored_sentences = []
         
         for sentence in sentences:
-            score = self._calculate_importance(sentence)
-            category = self._categorize_sentence(sentence)
-            word_count = len(sentence.split())
+            # Clean sentence - remove newlines and extra spaces
+            clean_sentence = ' '.join(sentence.split())
+            word_count = len(clean_sentence.split())
             
-            # Prefer medium-length sentences (10-40 words)
-            # Penalize very long sentences
-            if word_count > 50:
-                score *= 0.6
-            elif word_count > 40:
-                score *= 0.8
-            elif 10 <= word_count <= 30:
-                score *= 1.1  # Boost medium sentences
+            # Skip very short or very long sentences
+            if word_count < 5 or word_count > 35:
+                continue
             
-            if score >= min_importance and word_count >= 5:
+            # Skip chapter headers and titles (usually short and all caps or numbered)
+            if clean_sentence.startswith('Chapter') or clean_sentence.startswith('CHAPTER'):
+                continue
+            if clean_sentence.isupper() and word_count < 10:
+                continue
+            
+            score = self._calculate_importance(clean_sentence)
+            category = self._categorize_sentence(clean_sentence)
+            
+            # Strong preference for concise sentences
+            if 8 <= word_count <= 20:
+                score *= 1.3  # Best length
+            elif 21 <= word_count <= 25:
+                score *= 1.0  # OK
+            else:
+                score *= 0.7  # Too long or too short
+            
+            if score >= min_importance:
                 scored_sentences.append(KeyPoint(
-                    text=sentence.strip(),
+                    text=clean_sentence,
                     importance=score,
                     category=category
                 ))
@@ -265,10 +277,29 @@ class SmartFeatures:
         return summary
     
     def _split_into_sentences(self, text: str) -> List[str]:
-        """Split text into sentences"""
-        # Simple sentence splitter
+        """Split text into sentences - improved to handle various formats"""
+        # First, normalize newlines and multiple spaces
+        text = re.sub(r'\n+', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Split on sentence endings
         sentences = re.split(r'(?<=[.!?])\s+', text)
-        return [s.strip() for s in sentences if s.strip()]
+        
+        # Filter and clean
+        clean_sentences = []
+        for s in sentences:
+            s = s.strip()
+            if not s:
+                continue
+            # Skip if contains only numbers or is a list item
+            if re.match(r'^\d+\.?\s*$', s):
+                continue
+            # Skip chapter headers
+            if s.lower().startswith('chapter'):
+                continue
+            clean_sentences.append(s)
+        
+        return clean_sentences
     
     def _calculate_importance(self, sentence: str) -> float:
         """Calculate importance score for a sentence"""
