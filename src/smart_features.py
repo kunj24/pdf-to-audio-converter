@@ -169,7 +169,7 @@ class SmartFeatures:
         self,
         text: str,
         max_points: int = 10,
-        min_importance: float = 0.5
+        min_importance: float = 0.4
     ) -> List[KeyPoint]:
         """
         Extract key points from text
@@ -188,8 +188,18 @@ class SmartFeatures:
         for sentence in sentences:
             score = self._calculate_importance(sentence)
             category = self._categorize_sentence(sentence)
+            word_count = len(sentence.split())
             
-            if score >= min_importance and len(sentence.split()) >= 5:
+            # Prefer medium-length sentences (10-40 words)
+            # Penalize very long sentences
+            if word_count > 50:
+                score *= 0.6
+            elif word_count > 40:
+                score *= 0.8
+            elif 10 <= word_count <= 30:
+                score *= 1.1  # Boost medium sentences
+            
+            if score >= min_importance and word_count >= 5:
                 scored_sentences.append(KeyPoint(
                     text=sentence.strip(),
                     importance=score,
