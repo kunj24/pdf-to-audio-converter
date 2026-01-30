@@ -166,19 +166,23 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
             
             if mode == 'summary':
                 conversion_jobs[job_id]['current_step'] = 'Creating summary...'
-                summary_ratio = float(options.get('summary_ratio', 0.3))
-                # Use stricter max_sentences for 30% summary
-                max_sents = max(3, int(len(text.split('.')) * summary_ratio))
-                text = smart_features.summarize(text, ratio=summary_ratio, max_sentences=max_sents)
-                conversion_jobs[job_id]['processing_mode'] = 'Summary Mode'
+                # 30% summary - use very aggressive reduction
+                sentences = text.split('.')
+                max_sents = max(3, min(15, int(len(sentences) * 0.2)))  # Max 15 sentences or 20% of total
+                text = smart_features.summarize(text, ratio=0.2, max_sentences=max_sents)
+                conversion_jobs[job_id]['processing_mode'] = f'Summary Mode ({max_sents} sentences)'
                 app.logger.info(f"Job {job_id}: Summary created, text length after = {len(text)}")
             
             elif mode == 'keypoints':
                 conversion_jobs[job_id]['current_step'] = 'Extracting key points...'
                 max_points = int(options.get('max_keypoints', 10))
                 key_points = smart_features.extract_key_points(text, max_points=max_points)
-                # Just use the key point text directly, more concise
-                text = '. '.join([kp.text for kp in key_points])
+                # Very concise - truncate long sentences to 80 chars max
+                point_texts = []
+                for i, kp in enumerate(key_points):
+                    point_text = kp.text[:80] + '...' if len(kp.text) > 80 else kp.text
+                    point_texts.append(point_text)
+                text = '. '.join(point_texts) + '.'
                 conversion_jobs[job_id]['processing_mode'] = f'Key Points Mode ({len(key_points)} points)'
                 app.logger.info(f"Job {job_id}: Key points extracted = {len(key_points)}, text length after = {len(text)}")
             

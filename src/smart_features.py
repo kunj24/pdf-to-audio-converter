@@ -291,11 +291,15 @@ class SmartFeatures:
             if pattern.search(sentence):
                 score += 0.25
         
-        # Length factor (prefer medium-length sentences)
+        # Length factor - prefer SHORT concise sentences for key points
         words = len(sentence.split())
-        if 10 <= words <= 30:
+        if 5 <= words <= 20:  # Short, concise sentences
+            score += 0.3
+        elif 21 <= words <= 30:  # Medium length
             score += 0.1
-        elif words < 5:
+        elif words > 30:  # Penalize long sentences heavily
+            score -= 0.3
+        elif words < 5:  # Too short
             score -= 0.2
         
         # Has numbers or data
