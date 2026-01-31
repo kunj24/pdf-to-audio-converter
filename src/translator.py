@@ -111,7 +111,7 @@ class Translator:
         text: str,
         target_lang: str = 'en',
         source_lang: str = 'auto',
-        chunk_size: int = 4000
+        chunk_size: int = 2000  # Smaller chunks for better reliability
     ) -> TranslationResult:
         """
         Translate text to target language
@@ -150,21 +150,37 @@ class Translator:
             logger.error(f"Translation failed: {e}")
             raise RuntimeError(f"Translation failed: {e}")
     
-    def _translate_chunk(self, text: str, target_lang: str, source_lang: str) -> TranslationResult:
-        """Translate a single chunk of text"""
-        translation = self.translator.translate(
-            text,
-            dest=target_lang,
-            src=source_lang
-        )
+    def _translate_chunk(self, text: str, target_lang: str, source_lang: str, max_retries: int = 3) -> TranslationResult:
+        """Translate a single chunk of text with retry logic"""
+        import time
         
-        return TranslationResult(
-            text=translation.text,
-            source_lang=translation.src,
-            target_lang=translation.dest,
-            confidence=getattr(translation.extra_data, 'confidence', 0.0),
-            char_count=len(translation.text)
-        )
+        for attempt in range(max_retries):
+            try:
+                # Reinitialize translator on retry to get fresh connection
+                if attempt > 0:
+                    self.translator = GoogleTranslator()
+                    time.sleep(1)  # Brief pause between retries
+                
+                translation = self.translator.translate(
+                    text,
+                    dest=target_lang,
+                    src=source_lang
+                )
+                
+                return TranslationResult(
+                    text=translation.text,
+                    source_lang=translation.src,
+                    target_lang=translation.dest,
+                    confidence=getattr(translation.extra_data, 'confidence', 0.0),
+                    char_count=len(translation.text)
+                )
+            except Exception as e:
+                logger.warning(f"Translation attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    raise
+        
+        # Should not reach here, but just in case
+        raise RuntimeError("Translation failed after all retries")
     
     def _translate_large_text(
         self,

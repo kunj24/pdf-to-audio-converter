@@ -59,6 +59,14 @@ except ImportError as e:
     SMART_FEATURES_AVAILABLE = False
     print(f"⚠️ Smart features not available: {e}")
 
+try:
+    from gtts import gTTS
+    GTTS_AVAILABLE = True
+    print(f"✅ Google TTS loaded (multi-language audio support)")
+except ImportError as e:
+    GTTS_AVAILABLE = False
+    print(f"⚠️ Google TTS not available: {e}")
+
 def create_app():
     app = Flask(__name__)
     
@@ -213,11 +221,17 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
         conversion_jobs[job_id]['progress'] = 25
         
         # Step 2: Translation (if enabled)
+        app.logger.info(f"Job {job_id}: Translation check - TRANSLATOR_AVAILABLE={TRANSLATOR_AVAILABLE}")
+        app.logger.info(f"Job {job_id}: translate_to option = '{options.get('translate_to', '')}'")
+        
         if TRANSLATOR_AVAILABLE:
             target_lang = options.get('translate_to', '')
+            app.logger.info(f"Job {job_id}: target_lang='{target_lang}', conditions: bool={bool(target_lang)}, not_none={target_lang != 'none'}, not_en={target_lang != 'en'}")
+            
             if target_lang and target_lang != 'none' and target_lang != 'en':
                 conversion_jobs[job_id]['current_step'] = f'Translating to {target_lang}...'
                 conversion_jobs[job_id]['progress'] = 30
+                app.logger.info(f"Job {job_id}: Starting translation to {target_lang}, text length = {len(text)}")
                 
                 try:
                     translation_result = translator.translate(text, target_lang=target_lang)
@@ -227,8 +241,11 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
                         'target': translation_result.target_lang,
                         'confidence': translation_result.confidence
                     }
+                    app.logger.info(f"Job {job_id}: Translation SUCCESS - {translation_result.source_lang} -> {translation_result.target_lang}")
                 except Exception as e:
-                    app.logger.warning(f"Translation failed: {e}")
+                    app.logger.error(f"Job {job_id}: Translation FAILED: {e}")
+            else:
+                app.logger.info(f"Job {job_id}: Translation SKIPPED - conditions not met")
         
         conversion_jobs[job_id]['progress'] = 35
         
@@ -252,25 +269,46 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
         
         conversion_jobs[job_id]['progress'] = 45
         
-        # Step 3: Initialize TTS engine (Optimized with better settings)
+        # Step 3: Initialize TTS engine
         conversion_jobs[job_id]['current_step'] = 'Initializing text-to-speech...'
         conversion_jobs[job_id]['progress'] = 50
         
-        engine = pyttsx3.init()
+        # Check if we should use Google TTS for translated content
+        target_lang = options.get('translate_to', '')
+        use_gtts = GTTS_AVAILABLE and target_lang and target_lang != 'none' and target_lang != 'en'
         
-        # Optimized: Configure engine once
-        if rate:
-            engine.setProperty('rate', rate)
-        engine.setProperty('volume', 1.0)
+        # Create temporary WAV/MP3 file
+        temp_wav = output_path.replace('.mp3', '.wav') if output_format == 'mp3' else output_path
         
-        # Step 4: Convert to speech (Optimized)
+        # Step 4: Convert to speech
         conversion_jobs[job_id]['current_step'] = 'Generating speech...'
         conversion_jobs[job_id]['progress'] = 60
         
-        # Create temporary WAV file
-        temp_wav = output_path.replace('.mp3', '.wav') if output_format == 'mp3' else output_path
+        if use_gtts:
+            # Use Google TTS for translated languages (supports 100+ languages)
+            app.logger.info(f"Job {job_id}: Using Google TTS for language: {target_lang}")
+            conversion_jobs[job_id]['current_step'] = f'Generating {target_lang} speech with Google TTS...'
+            try:
+                tts = gTTS(text=text, lang=target_lang, slow=False)
+                # gTTS outputs MP3 directly - save to final output path
+                gtts_output = output_path if output_format == 'mp3' else output_path.replace('.wav', '.mp3')
+                tts.save(gtts_output)
+                conversion_jobs[job_id]['tts_engine'] = 'Google TTS'
+                conversion_jobs[job_id]['gtts_output'] = gtts_output  # Track gTTS output
+                app.logger.info(f"Job {job_id}: Google TTS saved to {gtts_output}")
+                    
+            except Exception as e:
+                app.logger.error(f"Google TTS failed: {e}, falling back to pyttsx3")
+                use_gtts = False
         
-        synth_to_wav(engine, text, temp_wav, rate=rate, voice=str(voice_index) if voice_index != 'default' else None)
+        if not use_gtts:
+            # Use pyttsx3 for English or as fallback
+            engine = pyttsx3.init()
+            if rate:
+                engine.setProperty('rate', rate)
+            engine.setProperty('volume', 1.0)
+            synth_to_wav(engine, text, temp_wav, rate=rate, voice=str(voice_index) if voice_index != 'default' else None)
+            conversion_jobs[job_id]['tts_engine'] = 'pyttsx3'
         
         conversion_jobs[job_id]['progress'] = 75
         
@@ -293,8 +331,14 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
                 except Exception as e:
                     app.logger.warning(f"Silence trimming failed: {e}")
         
-        # Step 6: Convert to MP3 if requested
-        if output_format == 'mp3':
+        # Step 6: Convert to MP3 if requested (skip if gTTS already created MP3)
+        gtts_output = conversion_jobs[job_id].get('gtts_output')
+        if gtts_output:
+            # gTTS already created MP3 - use it directly
+            conversion_jobs[job_id]['progress'] = 90
+            final_output = gtts_output
+            conversion_jobs[job_id]['output_format'] = 'mp3'  # gTTS always outputs MP3
+        elif output_format == 'mp3':
             conversion_jobs[job_id]['current_step'] = 'Converting to MP3...'
             conversion_jobs[job_id]['progress'] = 85
             try:
@@ -308,10 +352,12 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
                 if os.path.exists(temp_wav):
                     os.rename(temp_wav, output_path.replace('.mp3', '.wav'))
                     conversion_jobs[job_id]['output_format'] = 'wav'
+                    final_output = output_path.replace('.mp3', '.wav')
         
         # Step 7: Complete
-        # Determine the actual output file (may be WAV if MP3 conversion failed)
-        final_output = output_path if os.path.exists(output_path) else output_path.replace('.mp3', '.wav')
+        # Determine the actual output file (may be WAV if MP3 conversion failed, or MP3 from gTTS)
+        if not gtts_output:  # Only recalculate if not using gTTS
+            final_output = output_path if os.path.exists(output_path) else output_path.replace('.mp3', '.wav')
         
         conversion_jobs[job_id]['status'] = 'completed'
         conversion_jobs[job_id]['current_step'] = 'Conversion completed!'
@@ -331,7 +377,12 @@ def convert_pdf_to_audio(job_id, pdf_path, output_path, voice_index, rate, start
             except Exception as e:
                 app.logger.warning(f"Could not get audio metadata: {e}")
         
-        engine.stop()
+        # Clean up TTS engine if used
+        if engine is not None:
+            try:
+                engine.stop()
+            except:
+                pass
         
     except Exception as e:
         conversion_jobs[job_id]['status'] = 'failed'
@@ -408,6 +459,10 @@ def upload_file():
             'translate_to': request.form.get('target_lang', ''),  # target language code
         }
         
+        # Log form data for debugging
+        app.logger.info(f"Upload - mode: {options['mode']}, translate_to: '{options['translate_to']}'")
+        app.logger.info(f"Upload - form target_lang raw: '{request.form.get('target_lang')}'")
+        
         # Save uploaded file with better filename handling
         original_filename = file.filename
         # Secure filename but preserve extension
@@ -459,13 +514,17 @@ def get_status(job_id):
             return jsonify({'error': 'Job not found'}), 404
         
         job = conversion_jobs[job_id]
-        return jsonify({
+        response = {
             'status': job['status'],
             'progress': job['progress'],
             'current_step': job.get('current_step', ''),
             'output_file': job.get('output_file'),
-            'error': job.get('error')
-        })
+            'error': job.get('error'),
+            'translation': job.get('translation'),  # Include translation info
+            'processing_mode': job.get('processing_mode'),  # Include mode info
+            'tts_engine': job.get('tts_engine'),  # Include TTS engine used
+        }
+        return jsonify(response)
     except Exception as e:
         app.logger.error(f"Status check failed for job {job_id}: {e}")
         return jsonify({'error': f'Status check failed: {str(e)}'}), 500
