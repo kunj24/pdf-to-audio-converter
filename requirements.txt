@@ -19,3 +19,4 @@ pdf2image==1.17.0
 requests==2.31.0
 # Translation support
 googletrans==4.0.0-rc1
+gTTS==2.5.4
